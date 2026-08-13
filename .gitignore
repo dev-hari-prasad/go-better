@@ -1,0 +1,60 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build & Bundler outputs
+dist/
+**/dist/
+build/
+**/build/
+.vite/
+**/.vite/
+.cache/
+coverage/
+.nyc_output/
+tmp/
+temp/
+
+# Environment & Local secrets (EXCEPT .env.example)
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!.env.template
+*.env
+*.env.local
+
+# Logs
+*.log
+logs/
+pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# TypeScript
+*.tsbuildinfo
+**/*.tsbuildinfo
+
+# OS / System files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.sublime-project
+*.sublime-workspace
+
+# Antigravity / Agentic workspace cache
+.antigravity/
+.gemini/

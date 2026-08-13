@@ -58,3 +58,5 @@ ehthumbs.db
 # Antigravity / Agentic workspace cache
 .antigravity/
 .gemini/
+
+.vercel

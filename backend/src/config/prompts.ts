@@ -785,6 +785,15 @@ Do not manufacture findings to avoid an empty review.
 
 ---
 
+# AGENTIC FIX PROMPT
+If the review contains one or more CRITICAL or MAJOR findings that require code changes, add an ## Agentic Fix Prompt section containing a copy-pasteable Markdown prompt for an autonomous coding agent.
+
+The prompt must include the relevant issues, files, root cause, expected behavior, required fix, tests, and verification steps.
+
+Tell the agent to inspect the repository first, validate the findings, make only necessary changes, and avoid unrelated refactoring.
+
+Do not generate this section for MINOR-only or clean reviews.
+
 # FINAL PRINCIPLE
 
 Think like this:

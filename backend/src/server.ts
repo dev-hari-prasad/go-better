@@ -7,10 +7,7 @@ import './config/env.ts'
 import webHookReciver from './routes/webHookReciver.routes.ts'
 
 // Start background workers
-import './workers/sanitizePayload.ts'
-import './workers/extractContents.ts'
-import './workers/agenticReview.ts'
-
+import './workers/index.ts'
 
 // Inti app and declare port
 const app = express()

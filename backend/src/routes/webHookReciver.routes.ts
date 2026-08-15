@@ -3,12 +3,13 @@ import { log } from 'node:console'
 import { stringify } from 'node:querystring'
 import { Queue, Worker } from "bullmq";
 import { unprocessedWebhookPayload } from '../config/queue.ts' 
+import { API_RESPONSE_MESSAGES } from "../constants/apiResponse.ts";
 
 const router: express.Router = express.Router()
 
 router.get('/', (_req, res) => {
     res.status(200).json({
-        "message": "webhook service available"
+        "message": API_RESPONSE_MESSAGES[200]
     })
 } )
 
@@ -20,7 +21,7 @@ router.post('/', async (req, res) => {
     // Handle github events that are not suppourted
     if(githubWebhookEvent !== "pull_request"){
         return res.status(422).json({
-            "error": "UNSUPPORTED_EVENT",
+            "error": API_RESPONSE_MESSAGES[422],
             "message": "Event type not supported"
         })
     }
@@ -42,18 +43,22 @@ router.post('/', async (req, res) => {
             log("New webhook event received")
        
             return res.status(200).json({
-                "message": "Recived webhook data"
+                "message": API_RESPONSE_MESSAGES[200]
             })
             
         } catch (err) {
-            return err            
+            console.error('Failed to enqueue webhook payload', err)
+            return res.status(500).json({
+                "error": API_RESPONSE_MESSAGES[500],
+                "message": "Failed to process webhook payload"
+            })
         }
     }
 
     // Return error if request is not from GitHub
     else {
         return res.status(403).json({
-            error: "forbidden"
+            error: API_RESPONSE_MESSAGES[403]
         })
     }
 })

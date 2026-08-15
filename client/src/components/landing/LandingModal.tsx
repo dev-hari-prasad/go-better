@@ -1,88 +1,34 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
+import {
+  ShieldCheck,
+  Lightning,
+  Lock,
+  Cpu,
+  Shield,
+  GitPullRequest,
+  Eye,
+  Stack,
+  Sparkle,
+  Code,
+  ArrowRight
+} from '@phosphor-icons/react';
+import { WhyChooseSection } from '../dashboard/WhyChooseSection';
+import { ArchitectureScaleSection } from '../dashboard/ArchitectureScaleSection';
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Types & constants
-───────────────────────────────────────────────────────────────────────────── */
-interface LandingModalProps { isOpen: boolean; onClose: () => void; }
+interface LandingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
-const STEPS = [
-  { title: 'Fetching git diff & AST tree',        sub: 'acme-corp/hono-rabbit · PR #142' },
-  { title: 'Running 18 security rules',            sub: 'crypto · Zod schemas · N+1 patterns' },
-  { title: 'Generating review with Claude 3.5',   sub: '1 critical · 2 warnings · 3 suggestions' },
-  { title: 'Posting findings to pull request',     sub: 'PR comment posted · Slack notified' },
-];
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Tiny primitives
-───────────────────────────────────────────────────────────────────────────── */
-const IOSToggle: React.FC<{ on: boolean; onChange: () => void }> = ({ on, onChange }) => (
-  <button
-    onClick={e => { e.stopPropagation(); onChange(); }}
-    className="relative shrink-0 cursor-pointer focus:outline-none"
-    style={{ width: 32, height: 18 }}
-  >
-    <span className="absolute inset-0 rounded-full transition-colors duration-200" style={{ background: on ? '#c0f200' : 'rgba(255,255,255,0.08)' }} />
-    <span className="absolute top-[3px] h-3 w-3 rounded-full bg-white shadow transition-transform duration-200" style={{ transform: on ? 'translateX(17px)' : 'translateX(3px)' }} />
-  </button>
-);
-
-/* Laurel SVG – pure vectors, no icons */
-const Laurel: React.FC<{ side: 'left' | 'right' }> = ({ side }) => (
-  <svg width="34" height="60" viewBox="0 0 34 60" fill="none" style={{ transform: side === 'right' ? 'scaleX(-1)' : undefined }}>
-    <path d="M28 54 C22 42 18 30 22 14" stroke="rgba(255,255,255,0.18)" strokeWidth="1.3" strokeLinecap="round" fill="none"/>
-    {[[22,14],[16,4],[8,10]].map(([cx,cy],i)=>(
-      <ellipse key={i} cx={cx} cy={cy} rx={5} ry={3} transform={`rotate(${-30+i*25} ${cx} ${cy})`} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.1"/>
-    ))}
-    {[[25,27],[21,39],[19,50]].map(([cx,cy],i)=>(
-      <ellipse key={i} cx={cx} cy={cy} rx={4.5} ry={2.5} transform={`rotate(${10+i*15} ${cx} ${cy})`} fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.1"/>
-    ))}
-  </svg>
-);
-
-/* Integration icon pill */
-const AppBadge: React.FC<{ name: string; color: string; char: string }> = ({ name, color, char }) => (
-  <div className="flex items-center gap-1.5 rounded-full px-2.5 py-1 border" style={{ borderColor: 'rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.03)' }}>
-    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[8px] font-black" style={{ background: color + '28', color }}>{char}</span>
-    <span className="text-[10px] font-semibold text-zinc-400">{name}</span>
+/* ─── Marquee Feature Item ─── */
+const MarqueeItem: React.FC<{ icon: React.ReactNode; text: string }> = ({ icon, text }) => (
+  <div className="flex items-center gap-2.5 px-6 shrink-0 font-sans">
+    <div className="text-[#c0f200]">{icon}</div>
+    <span className="text-xs text-zinc-200 font-medium tracking-wide whitespace-nowrap">{text}</span>
   </div>
 );
 
-/* Model bubble */
-const ModelBubble: React.FC<{ label: string; color: string; size?: 'sm' | 'md' }> = ({ label, color, size = 'md' }) => {
-  const dim = size === 'md' ? 40 : 32;
-  return (
-    <div className="flex items-center justify-center rounded-full border font-black" style={{ width: dim, height: dim, background: color + '16', borderColor: color + '40', color, fontSize: size === 'md' ? 12 : 10 }}>
-      {label}
-    </div>
-  );
-};
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   Main component
-───────────────────────────────────────────────────────────────────────────── */
 export const LandingModal: React.FC<LandingModalProps> = ({ isOpen, onClose }) => {
-  const [step, setStep] = useState(0);
-  const [pct, setPct] = useState(0);
-  const [patched, setPatched] = useState(false);
-  const [patching, setPatching] = useState(false);
-  const [rules, setRules] = useState([
-    { id: 1, label: 'Flag raw string == on HMAC signatures', on: true },
-    { id: 2, label: 'Require Zod schema validation on every route', on: true },
-    { id: 3, label: 'Ban untyped "any" without justification comment', on: false },
-    { id: 4, label: 'Enforce .catch() on top-level async calls', on: true },
-  ]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-    const id = setInterval(() => {
-      setPct(p => {
-        if (p >= 100) { setStep(s => (s + 1) % 4); return 0; }
-        return p + 2.8;
-      });
-    }, 55);
-    return () => clearInterval(id);
-  }, [isOpen]);
-
   useEffect(() => {
     if (!isOpen) return;
     const fn = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -92,368 +38,333 @@ export const LandingModal: React.FC<LandingModalProps> = ({ isOpen, onClose }) =
 
   if (!isOpen) return null;
 
-  const patch = () => {
-    if (patched) { setPatched(false); return; }
-    setPatching(true);
-    setTimeout(() => { setPatching(false); setPatched(true); }, 650);
-  };
-
-  /* shared card style */
-  const card = {
-    background: 'rgba(255,255,255,0.024)',
-    border: '1px solid rgba(255,255,255,0.065)',
-    borderRadius: 18,
-  };
+  const featureItems = [
+    {
+      icon: <ShieldCheck size={18} weight="duotone" />,
+      text: 'Defend against critical security vulnerabilities',
+    },
+    {
+      icon: <Lightning size={18} weight="duotone" />,
+      text: 'Predictable BYOK execution without surprises',
+    },
+    {
+      icon: <Lock size={18} weight="duotone" />,
+      text: 'Identity-aware Zero Trust AST code isolation',
+    },
+    {
+      icon: <Cpu size={18} weight="duotone" />,
+      text: 'Battle-tested agentic review pipeline',
+    },
+  ];
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4" style={{ userSelect: 'none' }}>
-
-      {/* ── Backdrop ── */}
-      <div className="absolute inset-0 cursor-pointer" style={{ background: 'rgba(0,0,0,0.14)', backdropFilter: 'blur(3px)' }} onClick={onClose} />
-
-      {/* ── Shell ── */}
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-6 animate-apple-fade select-none">
+      {/* Modal Backdrop */}
       <div
-        className="relative z-10 w-full overflow-y-auto"
+        className="absolute inset-0 cursor-pointer bg-black/75 backdrop-blur-md transition-opacity"
+        onClick={onClose}
+      />
+
+      {/* Marquee Keyframe Styles */}
+      <style>{`
+        @keyframes marqueeScroll {
+          0% { transform: translateX(-50%); }
+          100% { transform: translateX(0%); }
+        }
+        .animate-marquee-track {
+          display: flex;
+          width: max-content;
+          animation: marqueeScroll 42s linear infinite;
+        }
+        .animate-marquee-track:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
+
+      {/* Modal Container */}
+      <div
+        className="relative z-10 w-full max-w-[1100px] max-h-[90vh] overflow-y-auto rounded-3xl p-6 md:p-8"
         style={{
-          maxWidth: 940,
-          maxHeight: '88vh',
-          background: 'linear-gradient(155deg,#111420 0%,#08090f 100%)',
+          background: '#080a0f',
           border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 24,
-          boxShadow: '0 40px 120px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07)',
+          boxShadow: '0 40px 120px rgba(0,0,0,0.85)',
+          scrollbarWidth: 'none',
         }}
       >
-        {/* Close btn */}
+        {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute right-5 top-5 z-50 flex cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-white/[0.08]"
-          style={{ width: 30, height: 30, border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.03)' }}
+          className="absolute right-6 top-6 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-colors"
+          style={{
+            border: '1px solid rgba(255,255,255,0.12)',
+            background: 'rgba(255,255,255,0.06)',
+            color: '#aaa',
+          }}
         >
-          <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><path d="M1 1l9 9M10 1L1 10" stroke="rgba(255,255,255,0.5)" strokeWidth="1.4" strokeLinecap="round"/></svg>
+          <svg width="12" height="12" viewBox="0 0 11 11" fill="none">
+            <path d="M1 1l9 9M10 1L1 10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          </svg>
         </button>
 
-        {/* ════ HERO ════ */}
-        <div className="flex flex-col items-center pt-16 pb-10 px-8 text-center relative overflow-hidden">
-          {/* Ambient glow */}
-          <div className="pointer-events-none absolute top-0 left-1/2 -translate-x-1/2 rounded-full opacity-25" style={{ width: 480, height: 200, background: 'radial-gradient(ellipse, #3730a3, transparent 70%)', filter: 'blur(50px)' }} />
-
-          {/* Join badge */}
-          <div className="mb-6 inline-flex cursor-default items-center gap-2 rounded-full px-3 py-1.5" style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.025)' }}>
-            <div className="flex -space-x-1">
-              {['1534528741775-53994a69daeb', '1507003211169-0a1dd7228f2d', '1438761681033-6461ffad8d80'].map((id, i) => (
-                <img key={i} src={`https://images.unsplash.com/photo-${id}?w=50&auto=format&fit=crop&q=80`} className="h-[18px] w-[18px] rounded-full object-cover" style={{ border: '1.5px solid #08090f' }} alt="" />
-              ))}
-            </div>
-            <span className="text-[11px] font-medium text-zinc-500">Join 50,000+ engineers shipping better code</span>
-          </div>
-
-          {/* Headline */}
-          <h1 className="text-white" style={{ fontSize: 'clamp(34px,5.5vw,56px)', fontWeight: 800, lineHeight: 1.02, letterSpacing: '-0.042em', maxWidth: 580, marginBottom: 18 }}>
-            Every code review.<br/>
-            <span style={{ color: '#c0f200' }}>One automated agent.</span>
-          </h1>
-
-          <p className="mb-7 max-w-[420px] text-[13px] leading-relaxed text-zinc-500" style={{ letterSpacing: '-0.01em' }}>
-            Stop waiting for peer feedback. CodeRabbit catches security holes, bugs, and anti-patterns the moment you push.
-          </p>
-
-          {/* CTAs */}
-          <div className="flex items-center gap-2.5">
-            <button
-              onClick={onClose}
-              className="cursor-pointer rounded-full text-[13px] font-semibold text-black transition-opacity hover:opacity-90 active:scale-[0.97]"
-              style={{ padding: '10px 26px', background: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.5)', letterSpacing: '-0.01em' }}
-            >
-              Get Started →
-            </button>
-            <button
-              onClick={onClose}
-              className="cursor-pointer rounded-full text-[13px] font-medium text-zinc-400 transition hover:text-white active:scale-[0.97]"
-              style={{ padding: '10px 22px', border: '1px solid rgba(255,255,255,0.09)', background: 'rgba(255,255,255,0.03)', letterSpacing: '-0.01em' }}
-            >
-              Explore Sandbox
-            </button>
-          </div>
-
-          {/* Brand strip */}
-          <div className="mt-10 flex flex-col items-center gap-3">
-            <p className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-zinc-700">Used by engineers at</p>
-            <div className="flex flex-wrap items-center justify-center gap-7 opacity-35">
-              {['GitHub','Vercel','Prisma','Supabase','Netlify','Hono'].map(b => (
-                <span key={b} className="text-[11px] font-bold tracking-tight text-zinc-300">{b}</span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ════ BENTO GRID ════ */}
-        <div className="grid grid-cols-3 gap-3 px-5 pb-5">
-
-          {/* ── A: Stepper (2 col) ── */}
-          <div className="col-span-2 flex flex-col p-6" style={card}>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 mb-3">Live Agent</p>
-            <h3 className="text-[18px] font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>Your agent does the work</h3>
-            <p className="text-[12px] text-zinc-500 leading-relaxed mb-6">
-              Set a goal. CodeRabbit fetches the diff, runs rules, then posts findings to your PR and Slack.
-            </p>
-
-            <div className="flex flex-col gap-0 mt-auto">
-              {STEPS.map((s, i) => {
-                const done  = i < step;
-                const active = i === step;
-                return (
-                  <div key={i} className="flex gap-4">
-                    {/* Track */}
-                    <div className="flex flex-col items-center" style={{ width: 18, minWidth: 18 }}>
-                      <div
-                        className="flex items-center justify-center rounded-full transition-all duration-500 shrink-0"
-                        style={{
-                          width: 18, height: 18, marginTop: 3,
-                          background: done ? '#c0f200' : active ? 'transparent' : 'rgba(255,255,255,0.04)',
-                          border: done ? '1.5px solid #c0f200' : active ? '1.5px solid rgba(255,255,255,0.4)' : '1.5px solid rgba(255,255,255,0.08)',
-                          boxShadow: active ? '0 0 0 3px rgba(192,242,0,0.08)' : undefined,
-                        }}
-                      >
-                        {done ? (
-                          <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 4L3.2 5.7L6.5 2.3" stroke="#000" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                        ) : (
-                          <span style={{ fontSize: 8, fontWeight: 700, fontFamily: 'monospace', color: active ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.15)' }}>{i+1}</span>
-                        )}
-                      </div>
-                      {i < 3 && <div className="flex-1 w-[1px] my-1" style={{ background: done ? 'rgba(192,242,0,0.2)' : 'rgba(255,255,255,0.05)', minHeight: 14 }} />}
-                    </div>
-
-                    {/* Content */}
-                    <div className="pb-4 flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-[12.5px] font-semibold truncate transition-colors duration-300" style={{ letterSpacing: '-0.02em', color: done ? '#3f3f46' : active ? '#f4f4f5' : '#27272a' }}>
-                          {s.title}
-                        </span>
-                        {active && (
-                          <span className="shrink-0 rounded px-1.5 py-0.5 text-[9px] font-mono font-bold" style={{ background: 'rgba(192,242,0,0.08)', color: '#c0f200' }}>
-                            {Math.round(pct)}%
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[10.5px] mt-0.5 truncate transition-colors duration-300" style={{ color: active ? '#52525b' : '#27272a' }}>{s.sub}</p>
-                      {active && (
-                        <div className="mt-2 h-[2px] w-full overflow-hidden rounded-full" style={{ background: 'rgba(255,255,255,0.05)' }}>
-                          <div className="h-full rounded-full transition-all duration-75" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #4f46e5, #c0f200)' }} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* ── B: 4.9 Rating (1 col) ── */}
-          <div className="col-span-1 flex flex-col items-center justify-center p-6" style={{ ...card, gap: 0 }}>
-            {/* Laurel + number */}
-            <div className="flex items-center gap-1" style={{ animation: 'float 4s ease-in-out infinite' }}>
-              <Laurel side="left" />
-              <span className="font-black text-white" style={{ fontSize: 62, lineHeight: 1, letterSpacing: '-0.05em' }}>4.9</span>
-              <Laurel side="right" />
-            </div>
-            {/* Stars */}
-            <div className="mt-2 flex gap-0.5">
-              {[...Array(5)].map((_, i) => (
-                <svg key={i} width="13" height="13" viewBox="0 0 13 13" fill="#f59e0b"><path d="M6.5 1L8 4.5L12 5L9 7.8L9.8 12L6.5 10.2L3.2 12L4 7.8L1 5L5 4.5L6.5 1Z"/></svg>
-              ))}
-            </div>
-            <p className="mt-3 max-w-[140px] text-center text-[11px] leading-relaxed text-zinc-600">
-              The average rating from thousands of reviews.
-            </p>
-          </div>
-
-          {/* ── C: Models (1 col) ── */}
-          <div className="col-span-1 flex flex-col p-6" style={card}>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 mb-3">Model Switch</p>
-            <h3 className="text-[16px] font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>350+ AI models, one home</h3>
-            <p className="text-[11px] text-zinc-500 leading-relaxed mb-5">
-              Switch models mid-review. Claude, GPT-4o, Gemini, Grok — bring your own keys.
-            </p>
-
-            {/* Spatial model bubbles */}
-            <div className="relative flex-1 flex items-center justify-center" style={{ minHeight: 100 }}>
-              {/* Center core */}
-              <div className="relative flex items-center justify-center rounded-full z-10 shrink-0" style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.04)', border: '1.5px solid rgba(255,255,255,0.12)' }}>
-                <span style={{ fontSize: 22 }}>🐰</span>
-                <div className="absolute inset-0 rounded-full" style={{ border: '1px dashed rgba(255,255,255,0.06)', animation: 'spin 20s linear infinite', borderRadius: '50%', scale: '1.5' }} />
-                <div className="absolute inset-0 rounded-full" style={{ border: '1px solid rgba(255,255,255,0.04)', borderRadius: '50%', scale: '2.1' }} />
-              </div>
-              {/* Orbiting models */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2"><ModelBubble label="Cl" color="#e48c44" size="sm" /></div>
-              <div className="absolute bottom-0 left-4"><ModelBubble label="G" color="#4f8ef7" size="sm" /></div>
-              <div className="absolute bottom-0 right-4"><ModelBubble label="AI" color="#10b981" size="sm" /></div>
-              <div className="absolute top-1/2 -translate-y-1/2 left-0"><ModelBubble label="X" color="#a855f7" size="sm" /></div>
-              <div className="absolute top-1/2 -translate-y-1/2 right-0"><ModelBubble label="Or" color="#f43f5e" size="sm" /></div>
-            </div>
-          </div>
-
-          {/* ── D: Code (2 col) – white card ── */}
-          <div className="col-span-2 flex flex-col overflow-hidden" style={{ ...card, background: 'white', border: '1px solid rgba(0,0,0,0.08)' }}>
-            <div className="flex items-start justify-between p-5 pb-3">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 mb-2">Interactive Sandbox</p>
-                <h3 className="text-[17px] font-bold text-zinc-950" style={{ letterSpacing: '-0.035em', lineHeight: 1.15 }}>
-                  Write and ship real code.<br/>Fix errors on the fly.
-                </h3>
-              </div>
-              <span className="shrink-0 rounded-full px-2.5 py-1 text-[9px] font-bold uppercase" style={patched
-                ? { background: '#d1fae5', color: '#065f46', border: '1px solid #6ee7b7' }
-                : { background: '#fff1f2', color: '#9f1239', border: '1px solid #fda4af', animation: 'pulse 2s ease-in-out infinite' }
-              }>
-                {patched ? '✓ Fixed' : '⚠ Timing Attack'}
-              </span>
-            </div>
-
-            {/* Code block */}
-            <div className="mx-5 mb-3 rounded-xl overflow-hidden" style={{ background: '#0d1117', border: '1px solid rgba(255,255,255,0.06)', fontFamily: "'JetBrains Mono', monospace", fontSize: 11 }}>
-              <div className="flex items-center gap-1.5 border-b border-white/[0.05] px-4 py-2.5">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
-                <span className="h-2.5 w-2.5 rounded-full bg-[#28c840]" />
-                <span className="ml-3 text-[10px] text-zinc-600">src/service/auth.ts</span>
-              </div>
-              <div className="p-4 leading-[1.7]">
-                <div><span className="text-zinc-600">// ─── Signature verification ───</span></div>
-                <div><span className="text-indigo-400">const</span> <span className="text-zinc-300">expected</span> <span className="text-zinc-500">=</span> <span className="text-emerald-400">crypto</span><span className="text-zinc-400">.createHmac(</span><span className="text-amber-300">"sha256"</span><span className="text-zinc-400">, secret)</span></div>
-                <div className="pl-4"><span className="text-zinc-400">.update(payload).digest(</span><span className="text-amber-300">"hex"</span><span className="text-zinc-400">);</span></div>
-
-                {patching ? (
-                  <div className="mt-1 text-indigo-400" style={{ animation: 'pulse 1s ease-in-out infinite' }}>↻ &nbsp;Generating constant-time patch…</div>
-                ) : patched ? (
-                  <div className="mt-1 rounded px-2 py-1.5" style={{ background: 'rgba(16,185,129,0.08)', borderLeft: '2px solid #10b981' }}>
-                    <div><span className="text-emerald-400">+</span> <span className="text-emerald-300">const</span> <span className="text-zinc-300">bufA</span> <span className="text-zinc-500">=</span> <span className="text-emerald-400">Buffer</span><span className="text-zinc-400">.from(signature, </span><span className="text-amber-300">"hex"</span><span className="text-zinc-400">);</span></div>
-                    <div><span className="text-emerald-400">+</span> <span className="text-emerald-300">const</span> <span className="text-zinc-300">bufB</span> <span className="text-zinc-500">=</span> <span className="text-emerald-400">Buffer</span><span className="text-zinc-400">.from(expected, </span><span className="text-amber-300">"hex"</span><span className="text-zinc-400">);</span></div>
-                    <div><span className="text-emerald-400">+ if</span> <span className="text-zinc-400">(!</span><span className="text-emerald-400">crypto</span><span className="text-zinc-400">.timingSafeEqual(bufA, bufB)) </span><span className="text-indigo-400">throw</span> <span className="text-zinc-300">err;</span></div>
-                  </div>
-                ) : (
-                  <div className="mt-1 rounded px-2 py-1.5" style={{ background: 'rgba(239,68,68,0.08)', borderLeft: '2px solid #ef4444' }}>
-                    <div style={{ textDecoration: 'line-through', color: '#f87171' }}>- if (signature !== expected) {'{'} throw err; {'}'}</div>
-                    <div className="text-[9.5px] mt-1 text-rose-500 flex gap-1.5 items-start">
-                      <span>⚠</span><span>Timing side-channel — attackers can leak bytes by measuring response time.</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="mt-0.5"><span className="text-indigo-400">return</span> <span className="text-emerald-400">grantAccess</span><span className="text-zinc-400">(session);</span></div>
-              </div>
-            </div>
-
-            <div className="flex justify-end px-5 pb-4">
-              <button
-                onClick={patch}
-                disabled={patching}
-                className="cursor-pointer rounded-full text-[11.5px] font-semibold transition-all hover:opacity-85 active:scale-[0.97]"
-                style={{ padding: '7px 18px', ...(patched
-                  ? { background: '#f4f4f5', color: '#18181b', border: '1px solid #e4e4e7' }
-                  : { background: '#18181b', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }
-                ) }}
+        {/* ════════════════════════════════════════════════════
+            1. 3-COLUMN CONTAINERS (Cloudflare Containers Grid)
+        ════════════════════════════════════════════════════ */}
+        <div
+          className="grid grid-cols-1 md:grid-cols-3 overflow-hidden rounded-2xl border border-[#1e1e22] bg-[#0c0e15]"
+        >
+          {/* Column 1: Intro / CTA */}
+          <div className="p-6 md:p-8 flex flex-col justify-between" style={{ borderRight: '1px solid #1e1e22' }}>
+            <div className="space-y-4">
+              {/* Dashed pill badge */}
+              <div
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-semibold"
+                style={{
+                  border: '1px dashed rgba(192,242,0,0.4)',
+                  background: 'rgba(192,242,0,0.08)',
+                  color: '#c0f200',
+                }}
               >
-                {patching ? 'Patching…' : patched ? 'Revert ↩' : '✦ Apply Patch'}
+                <Sparkle size={14} weight="duotone" />
+                <span>GoBetter AI</span>
+              </div>
+
+              <h2 style={{ fontSize: 'clamp(22px, 2.5vw, 30px)', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em', lineHeight: 1.15, fontFamily: "'Manrope', sans-serif" }}>
+                You can use GoBetter AI to:
+              </h2>
+
+              <p style={{ fontSize: 13, color: '#777', lineHeight: 1.6, fontFamily: "'Manrope', sans-serif" }}>
+                See real-world capabilities of automated agentic code reviews.
+              </p>
+            </div>
+
+            <div className="mt-6">
+              <button
+                onClick={onClose}
+                className="cursor-pointer group flex items-center gap-2 transition-all font-sans"
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: 999,
+                  border: '1px solid rgba(255,255,255,0.15)',
+                  background: 'transparent',
+                  color: '#fff',
+                  fontSize: 13,
+                  fontWeight: 600,
+                }}
+              >
+                <span>See more</span>
+                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
 
-          {/* ── E: Integrations (1 col) ── */}
-          <div className="col-span-1 flex flex-col p-6 overflow-hidden" style={card}>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 mb-3">Integrations</p>
-            <h3 className="text-[16px] font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>Works inside your apps</h3>
-            <p className="text-[11px] text-zinc-500 leading-relaxed mb-5">
-              Connect GitHub, GitLab, Slack, Discord, and hundreds more.
-            </p>
-
-            {/* App badges */}
-            <div className="flex flex-wrap gap-1.5 mt-auto">
-              {[
-                { name: 'GitHub', color: '#e2e8f0', char: 'G' },
-                { name: 'GitLab', color: '#fb923c', char: 'GL' },
-                { name: 'Slack', color: '#22c55e', char: 'S' },
-                { name: 'Discord', color: '#818cf8', char: 'D' },
-                { name: 'Vercel', color: '#f4f4f5', char: 'V' },
-                { name: 'Linear', color: '#818cf8', char: 'L' },
-              ].map(a => <AppBadge key={a.name} {...a} />)}
-            </div>
-          </div>
-
-          {/* ── F: Custom Rules (1 col) ── */}
-          <div className="col-span-1 flex flex-col p-6" style={card}>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 mb-3">Custom Rules</p>
-            <h3 className="text-[16px] font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>A marketplace of superpowers</h3>
-            <p className="text-[11px] text-zinc-500 leading-relaxed mb-4">
-              Add custom guidelines, enforce conventions, flip rules per repo.
-            </p>
-
-            <div className="flex flex-col gap-0.5">
-              {rules.map(r => (
-                <div
-                  key={r.id}
-                  onClick={() => setRules(p => p.map(x => x.id === r.id ? { ...x, on: !x.on } : x))}
-                  className="flex cursor-pointer items-center justify-between gap-2 rounded-lg px-2.5 py-2 transition-colors hover:bg-white/[0.03]"
-                >
-                  <span className="text-[10.5px] text-zinc-500 leading-tight truncate" style={{ ...(!r.on ? { textDecoration: 'line-through', opacity: 0.35 } : {}) }}>
-                    {r.label}
-                  </span>
-                  <IOSToggle on={r.on} onChange={() => setRules(p => p.map(x => x.id === r.id ? { ...x, on: !x.on } : x))} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* ── G: Private (1 col) ── */}
-          <div className="col-span-1 flex flex-col p-6" style={card}>
-            <p className="text-[11px] font-bold uppercase tracking-widest text-zinc-600 mb-3">Security</p>
-            <h3 className="text-[16px] font-bold text-white mb-1" style={{ letterSpacing: '-0.03em' }}>Private by design</h3>
-            <p className="text-[11px] text-zinc-500 leading-relaxed mb-5">
-              Your diffs route directly to your API keys. We never log or train on your code.
-            </p>
-
-            <div className="flex flex-col gap-2 mt-auto">
-              {[
-                'AES-256 key encryption',
-                'Zero-log API gateway',
-                'No model training on code',
-                'SOC 2 compliant infra',
-              ].map(item => (
-                <div key={item} className="flex items-center gap-2">
-                  <div className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full" style={{ background: 'rgba(192,242,0,0.1)', border: '1px solid rgba(192,242,0,0.2)' }}>
-                    <svg width="7" height="7" viewBox="0 0 7 7" fill="none"><path d="M1 3.5L2.8 5.3L6 1.5" stroke="#c0f200" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                  <span className="text-[11px] text-zinc-500">{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-        </div>
-
-        {/* ════ FOOTER CTA ════ */}
-        <div className="mx-5 mb-5 flex flex-col items-center rounded-2xl px-8 py-10 text-center" style={{ background: 'rgba(255,255,255,0.015)', border: '1px solid rgba(255,255,255,0.05)' }}>
-          <h2 className="text-[26px] font-black text-white" style={{ letterSpacing: '-0.04em', lineHeight: 1 }}>
-            Everything, finally in one place.
-          </h2>
-          <p className="mx-auto mt-2.5 max-w-sm text-[12px] leading-relaxed text-zinc-600">
-            Your repositories, AI agents, and team notifications — connected and automated from one workspace.
-          </p>
-          <button
-            onClick={onClose}
-            className="mt-6 cursor-pointer rounded-full text-[13px] font-semibold text-black transition hover:opacity-90 active:scale-[0.97]"
-            style={{ padding: '11px 28px', background: 'white', boxShadow: '0 2px 12px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5)', letterSpacing: '-0.01em' }}
+          {/* Column 2: Run AI generated code securely */}
+          <div
+            className="p-6 md:p-8 flex flex-col space-y-6 transition-colors hover:bg-[#11141e]"
+            style={{ borderRight: '1px solid #1e1e22' }}
           >
-            Enter CodeRabbit →
-          </button>
+            <div className="space-y-6">
+              {/* Mock terminal graphic */}
+              <div
+                className="w-full rounded-xl p-3 flex flex-col justify-between relative overflow-hidden group"
+                style={{ height: 176, border: '1px solid #1e1e22', background: '#141722' }}
+              >
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(244,63,94,0.7)' }} />
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(245,158,11,0.7)' }} />
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(16,185,129,0.7)' }} />
+                </div>
+
+                <div className="my-auto flex items-center justify-center">
+                  <div
+                    className="p-4 rounded-2xl group-hover:scale-110 transition-transform"
+                    style={{ border: '1px solid rgba(192,242,0,0.25)', background: 'rgba(192,242,0,0.08)', color: '#c0f200' }}
+                  >
+                    <Lock size={32} weight="duotone" />
+                  </div>
+                </div>
+
+                <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#555', textAlign: 'center' }}>
+                  Isolated Sandbox Context • AES-256
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, letterSpacing: '-0.01em', fontFamily: "'Manrope', sans-serif" }}>
+                  Run AI generated code securely
+                </h3>
+                <p style={{ fontSize: 13, color: '#666', lineHeight: 1.6, fontFamily: "'Manrope', sans-serif" }}>
+                  Execute untrusted code diff checks in a fully isolated environment per session or per user. Give your AI agents the ability to generate and apply constant-time security patches.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Column 3: Latency sensitive checks */}
+          <div className="p-6 md:p-8 flex flex-col space-y-6 transition-colors hover:bg-[#11141e]">
+            <div className="space-y-6">
+              {/* Mock terminal graphic */}
+              <div
+                className="w-full rounded-xl p-3 flex flex-col justify-between relative overflow-hidden group"
+                style={{ height: 176, border: '1px solid #1e1e22', background: '#141722' }}
+              >
+                <div className="flex items-center justify-between pb-2" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#444' }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#444' }} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#444' }} />
+                  </div>
+                  <span style={{ fontSize: 9, fontFamily: 'monospace', color: '#555' }}>ast-worker.ts</span>
+                </div>
+
+                <div className="space-y-1.5 p-1" style={{ fontFamily: 'monospace', fontSize: 10, color: '#888' }}>
+                  <div className="flex items-center gap-2">
+                    <span style={{ color: '#c0f200' }}>$</span>
+                    <span style={{ color: '#ddd' }}>go-better scan --target=pr-142</span>
+                  </div>
+                  <div style={{ color: '#4ade80', fontSize: 9, paddingLeft: 12 }}>✓ 18 security rules passed (42ms)</div>
+                  <div style={{ color: '#fbbf24', fontSize: 9, paddingLeft: 12 }}>⚡ Edge worker routed: node-ams3</div>
+                </div>
+
+                <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#555', textAlign: 'right' }}>
+                  sub-100ms response latency
+                </div>
+              </div>
+
+              {/* Description */}
+              <div>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: '#fff', marginBottom: 6, letterSpacing: '-0.01em', fontFamily: "'Manrope', sans-serif" }}>
+                  Run latency sensitive checks close to end users
+                </h3>
+                <p style={{ fontSize: 13, color: '#666', lineHeight: 1.6, fontFamily: "'Manrope', sans-serif" }}>
+                  Deploy AST-level static inspection workloads that run near users for optimal performance. GoBetter AI automatically places each instance in the optimal edge location across our network.
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
 
-      </div>
+        {/* ════ 2. WHY CHOOSE SECTION ════ */}
+        <div className="mt-8">
+          <WhyChooseSection />
+        </div>
 
-      <style>{`
-        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
-      `}</style>
+        {/* ════ 3. GLOBAL ARCHITECTURE & SCALE SECTION ════ */}
+        <div className="mt-8">
+          <ArchitectureScaleSection />
+        </div>
+
+        {/* ════════════════════════════════════════════════════
+            4. HERO CTA PANEL (MOVED TO THE END OF POPUP)
+        ════════════════════════════════════════════════════ */}
+        <div
+          className="relative overflow-hidden rounded-3xl mt-8 border border-[#c0f200]/25 shadow-[0_0_20px_rgba(192,242,0,0.07)]"
+          style={{
+            background: 'linear-gradient(165deg, #0e1509 0%, #17260d 45%, #1c2e0e 70%, #0d1407 100%)',
+          }}
+        >
+          {/* Dense Technical Dot Matrix Background Texture */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-14 z-0"
+            style={{
+              backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.35) 1px, transparent 1px)',
+              backgroundSize: '12px 12px',
+            }}
+          />
+
+          {/* Bottom Radial Sun-like Glow (Luminous Brand Arc) */}
+          <div
+            className="absolute pointer-events-none z-0"
+            style={{
+              bottom: '20px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '85%',
+              height: '210px',
+              background: 'radial-gradient(ellipse 75% 85% at 50% 100%, rgba(192, 242, 0, 0.42) 0%, rgba(192, 242, 0, 0.16) 45%, transparent 80%)',
+              filter: 'blur(45px)',
+            }}
+          />
+          <div
+            className="absolute pointer-events-none z-0"
+            style={{
+              bottom: '0px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              width: '55%',
+              height: '110px',
+              background: 'radial-gradient(ellipse 60% 100% at 50% 100%, rgba(255, 255, 220, 0.6) 0%, rgba(192, 242, 0, 0.25) 50%, transparent 80%)',
+              filter: 'blur(22px)',
+            }}
+          />
+
+          {/* Hero Content Center Stack */}
+          <div className="relative z-20 max-w-2xl mx-auto text-center pt-12 pb-14 px-6 md:pt-16 md:pb-18 md:px-12">
+            {/* Heading — Tight, Dense, Engineered Framer/Cloudflare Typography */}
+            <h1
+              className="text-white font-extrabold mx-auto mb-3"
+              style={{
+                fontFamily: "'Manrope', sans-serif",
+                fontSize: 'clamp(28px, 4.2vw, 44px)',
+                letterSpacing: '-0.04em',
+                lineHeight: 1.08,
+                maxWidth: '520px',
+              }}
+            >
+              Ship code without compromise
+            </h1>
+
+            {/* Supporting Paragraph — Controlled Centered Text Column */}
+            <p
+              className="font-sans mx-auto mb-8"
+              style={{
+                fontFamily: "'Manrope', sans-serif",
+                fontSize: 'clamp(13px, 1.25vw, 15px)',
+                fontWeight: 400,
+                color: 'rgba(255, 255, 255, 0.75)',
+                lineHeight: 1.55,
+                maxWidth: '460px',
+              }}
+            >
+              Join thousands of developers who've eliminated review complexity and deployed globally with GoBetter AI. Start reviewing for free — no credit card required.
+            </p>
+
+            {/* Coherent CTA Buttons Group */}
+            <div className="flex flex-wrap items-center justify-center gap-3.5">
+              {/* Primary Button */}
+              <button
+                onClick={onClose}
+                className="px-7 py-3.5 rounded-full bg-[#c0f200] text-black font-bold text-xs md:text-sm font-sans tracking-tight hover:bg-[#d4ff1a] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_4px_24px_rgba(192,242,0,0.35)] cursor-pointer"
+              >
+                Start reviewing for free
+              </button>
+
+              {/* Secondary Button */}
+              <button
+                onClick={onClose}
+                className="px-7 py-3.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold text-xs md:text-sm font-sans tracking-tight hover:bg-white/20 hover:border-white/30 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
+              >
+                View docs
+              </button>
+            </div>
+          </div>
+
+          {/* Integrated Bottom Feature Strip with Continuous Horizontal Marquee */}
+          <div className="relative z-20 w-full border-t border-white/12 bg-black/40 backdrop-blur-md py-3.5 overflow-hidden rounded-b-[23px]">
+            {/* Gradient Edge Vignette Masks */}
+            <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-black/60 to-transparent z-30 pointer-events-none" />
+            <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-black/60 to-transparent z-30 pointer-events-none" />
+
+            {/* Continuous Infinite Marquee Track */}
+            <div className="animate-marquee-track">
+              {/* Duplicate the array to form a seamless infinite loop */}
+              {[...featureItems, ...featureItems, ...featureItems].map((item, idx) => (
+                <MarqueeItem key={idx} icon={item.icon} text={item.text} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };

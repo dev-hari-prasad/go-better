@@ -33,7 +33,7 @@ export const worker = new Worker(
 
         const finalPrompt = {
             systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
-            reviewMode: REVIEW_MODES.FOCUSED,
+            reviewMode: REVIEW_MODES.DEEP_DIVE,
             context: extractedPrInfo
         }
           
@@ -44,29 +44,32 @@ export const worker = new Worker(
 
 
         // Update notification queue 
-        await reviewNotification.add("notification", {
-            repository: {
-                id: sanitizedPayload.repository.id,
-                name: sanitizedPayload.repository.name,
-                fullName: sanitizedPayload.repository.full_name,
-            },
+        // Useful in future not required now refer to docs/guides/queueAdnWorkers.md 
+        // await reviewNotification.add("notification", {
+        //     body: {
+        //         repository: {
+        //             id: sanitizedPayload.repository.id,
+        //             name: sanitizedPayload.repository.name,
+        //             fullName: sanitizedPayload.repository.full_name,
+        //         },
 
-            pullRequest: {
-                id: pullRequest.id,
-                number: sanitizedPayload.number,
-                title: pullRequest.title,
-                url: pullRequest.urls.html,
-                author: {
-                    id: pullRequest.author.id,
-                    username: pullRequest.author.login,
-                },
-            },
+        //         pullRequest: {
+        //             id: pullRequest.id,
+        //             number: sanitizedPayload.number,
+        //             title: pullRequest.title,
+        //             url: pullRequest.urls.html,
+        //             author: {
+        //                 id: pullRequest.author.id,
+        //                 username: pullRequest.author.login,
+        //             },
+        //         },
 
-            review: {
-                status: "completed",
-                result: text,
-            },
-        });
+        //         review: {
+        //             status: "completed",
+        //             result: text,
+        //         },
+        //     }
+        // });
 
         } 
           catch (error) {

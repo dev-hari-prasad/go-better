@@ -1,0 +1,51 @@
+export const API_RESPONSE_MESSAGES = {
+  // 2xx — Success
+  200: "OK",
+  201: "Created",
+  202: "Accepted",
+  204: "No Content",
+
+  // 3xx — Redirection
+  301: "Moved Permanently",
+  302: "Found",
+  304: "Not Modified",
+
+  // 4xx — Client Errors
+  400: "Bad Request",
+  401: "Unauthorized",
+  402: "Payment Required",
+  403: "Forbidden",
+  404: "Not Found",
+  405: "Method Not Allowed",
+  406: "Not Acceptable",
+  408: "Request Timeout",
+  409: "Conflict",
+  410: "Gone",
+  411: "Length Required",
+  412: "Precondition Failed",
+  413: "Content Too Large",
+  414: "URI Too Long",
+  415: "Unsupported Media Type",
+  416: "Range Not Satisfiable",
+  417: "Expectation Failed",
+  422: "Unprocessable Content",
+  423: "Locked",
+  424: "Failed Dependency",
+  426: "Upgrade Required",
+  428: "Precondition Required",
+  429: "Too Many Requests",
+  431: "Request Header Fields Too Large",
+  451: "Unavailable For Legal Reasons",
+
+  // 5xx — Server Errors
+  500: "Internal Server Error",
+  501: "Not Implemented",
+  502: "Bad Gateway",
+  503: "Service Unavailable",
+  504: "Gateway Timeout",
+  505: "HTTP Version Not Supported",
+  507: "Insufficient Storage",
+  508: "Loop Detected",
+  510: "Not Extended",
+  511: "Network Authentication Required",
+} as const;

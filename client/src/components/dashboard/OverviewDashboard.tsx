@@ -154,7 +154,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
         </div>
 
         {/* Separator */}
-        <hr className="border-t border-[#30363d] opacity-40 w-full mb-5" />
+        <hr className="border-t border-[#30363d] opacity-40 w-full mb-8" />
 
         <div className="space-y-8">
           {/* Active reviews */}

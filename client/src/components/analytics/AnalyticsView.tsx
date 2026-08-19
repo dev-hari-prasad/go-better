@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
 import { 
-  ChevronDown, 
-  Search,
   Clock,
-  RefreshCw
+  Sparkles
 } from 'lucide-react';
 import { SummaryView } from './views/SummaryView';
 import { TimeMetricsView } from './views/TimeMetricsView';
@@ -13,24 +11,39 @@ import { AISpendingView } from './views/AISpendingView';
 import { TokenUsageView } from './views/TokenUsageView';
 
 type AnalyticsTab = 
-  | 'summary'
-  | 'time-metrics'
-  | 'data-export'
   | 'ai-spending'
   | 'token-usage'
-  | 'advanced-components';
+  | 'advanced-components'
+  | 'data-export'
+  | 'summary'
+  | 'time-metrics';
 
-const TABS: { id: AnalyticsTab; label: string }[] = [
-  { id: 'summary', label: 'Summary' },
-  { id: 'time-metrics', label: 'Time Metrics' },
+const TABS: { id: AnalyticsTab; label: string; comingSoon?: boolean }[] = [
   { id: 'ai-spending', label: 'AI Spending' },
   { id: 'token-usage', label: 'Token Usage' },
   { id: 'advanced-components', label: 'Advanced Components' },
   { id: 'data-export', label: 'Data Export' },
+  { id: 'summary', label: 'Summary', comingSoon: true },
+  { id: 'time-metrics', label: 'Time Metrics', comingSoon: true },
 ];
 
+const ComingSoonView: React.FC<{ title: string; description: string }> = ({ title, description }) => (
+  <div className="flex flex-col items-center justify-center min-h-[380px] p-8 text-center bg-[#13151f] border border-[#262b3a] rounded-2xl max-w-xl mx-auto mt-6 animate-apple-fade">
+    <div className="p-3.5 rounded-2xl bg-[#1a1e2a] text-[#c0f200] border border-[#283042] mb-3 shadow-lg">
+      <Clock className="w-6 h-6" />
+    </div>
+    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-mono font-semibold bg-[#c0f200]/10 text-[#c0f200] border border-[#c0f200]/30 mb-2.5">
+      <span>COMING SOON</span>
+    </div>
+    <h2 className="text-lg font-bold text-zinc-100 tracking-tight">{title}</h2>
+    <p className="text-xs text-zinc-400 mt-1.5 max-w-sm leading-relaxed">
+      {description}
+    </p>
+  </div>
+);
+
 export const AnalyticsView: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<AnalyticsTab>('summary');
+  const [activeTab, setActiveTab] = useState<AnalyticsTab>('ai-spending');
   const tabsRef = React.useRef<(HTMLButtonElement | null)[]>([]);
   const [activeTabStyle, setActiveTabStyle] = useState({ left: 0, width: 0, opacity: 0 });
 
@@ -65,13 +78,18 @@ export const AnalyticsView: React.FC = () => {
               key={tab.id}
               ref={el => tabsRef.current[idx] = el}
               onClick={() => setActiveTab(tab.id)}
-              className={`relative z-10 flex items-center px-4 py-1.5 rounded-lg text-[13px] font-medium transition-colors cursor-pointer ${
+              className={`relative z-10 flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 activeTab === tab.id
                   ? 'text-zinc-100'
                   : 'text-zinc-400 hover:text-zinc-300'
               }`}
             >
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.comingSoon && (
+                <span className="text-[9px] font-mono font-medium px-1.5 py-0.2 rounded bg-[#1e2330] text-zinc-400 border border-[#2b3345]">
+                  Soon
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -80,18 +98,21 @@ export const AnalyticsView: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Main Content Area */}
         <div className="flex-1 px-6 pb-6 overflow-y-auto bg-[#0d1117]">
-          {activeTab === 'summary' && <SummaryView />}
-          {activeTab === 'time-metrics' && <TimeMetricsView />}
-          {activeTab === 'data-export' && <DataExportView />}
           {activeTab === 'ai-spending' && <AISpendingView />}
           {activeTab === 'token-usage' && <TokenUsageView />}
           {activeTab === 'advanced-components' && <AdvancedDemoView />}
-          
-          {/* Placeholder for un-implemented tabs */}
-          {!['summary', 'time-metrics', 'data-export', 'ai-spending', 'token-usage', 'advanced-components'].includes(activeTab) && (
-            <div className="flex items-center justify-center h-full text-zinc-500 font-mono text-sm">
-              {TABS.find(t => t.id === activeTab)?.label} Metrics coming soon...
-            </div>
+          {activeTab === 'data-export' && <DataExportView />}
+          {activeTab === 'summary' && (
+            <ComingSoonView
+              title="Summary Dashboard"
+              description="Executive overview metrics, active PR review velocity, and aggregated quality scores are coming in the next release."
+            />
+          )}
+          {activeTab === 'time-metrics' && (
+            <ComingSoonView
+              title="Time & Velocity Metrics"
+              description="Detailed turnaround time breakdown, cycle time to merge, and review latency tracking will be available soon."
+            />
           )}
         </div>
       </div>

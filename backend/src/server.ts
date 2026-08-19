@@ -4,7 +4,7 @@ import { log } from 'node:console'
 import './config/env.ts'
 
 //Import routes
-import webHookReciver from './routes/webHookReciver.routes.ts'
+import webHookReciver from './routes/webHookReciver.route.ts'
 
 // Start background workers
 import './workers/index.ts'

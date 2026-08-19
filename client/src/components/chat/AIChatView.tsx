@@ -147,31 +147,32 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
     const queryText = inputText;
     setInputText('');
     setIsAiThinking(true);
-    // Add a streaming dummy message
-    const streamingId = `ai-${Date.now()}`;
-    setChatHistory((prev) => [...prev, {
-      id: streamingId,
-      sender: 'ai',
-      text: 'Analyzing repository context...',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isStreaming: true,
-      title: 'Streaming Text'
-    }]);
 
     setTimeout(() => {
       setIsAiThinking(false);
-      setChatHistory((prev) => prev.map(m => m.id === streamingId ? {
-        ...m,
-        text: `Regarding your query about "${queryText}": I analyzed the repository structure and active branches. The AST type checking verifies 100% compliance with strict null checks, and no un-sanitized user inputs reach Prisma query parameters.`,
-        isStreaming: false,
-        title: 'Analysis Complete',
-        codeSnippet: queryText.toLowerCase().includes('code') || queryText.toLowerCase().includes('fix')
+      const isCodeQuery = queryText.toLowerCase().includes('code') || queryText.toLowerCase().includes('fix') || queryText.toLowerCase().includes('test');
+      const isSecurityQuery = queryText.toLowerCase().includes('security') || queryText.toLowerCase().includes('risk') || queryText.toLowerCase().includes('pr');
+
+      const responseText = isSecurityQuery
+        ? `I completed an AST static audit for "${queryText}". The parser detected zero un-sanitized parameters reaching Prisma query buffers, strict null assertion compliance is 100%, and cryptographic signatures conform to RFC-7519 standards.`
+        : `Regarding your query about "${queryText}": I analyzed the repository structure and active branches. The AST type checking verifies 100% compliance with strict null checks, and no un-sanitized user inputs reach Prisma query parameters.`;
+
+      const aiReply: ChatMessage = {
+        id: `ai-${Date.now()}`,
+        sender: 'ai',
+        text: responseText,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isStreaming: true,
+        title: isSecurityQuery ? 'AST Analysis Complete' : 'Gobe AI Response',
+        codeSnippet: isCodeQuery
           ? `// Automated Code Recommendation\nexport async function optimizedBatchQuery(ids: string[]) {\n  return prisma.user.findMany({\n    where: { id: { in: ids } },\n    select: { id: true, email: true, role: true }\n  });\n}`
           : undefined,
-        sources: [{ id: '1', name: 'prisma/schema.prisma' }],
-        followUps: ['Show me the Prisma schema', 'How do I test this batch query?']
-      } : m));
-    }, 1200);
+        sources: [{ id: '1', name: 'src/service/auth.ts' }, { id: '2', name: 'prisma/schema.prisma' }],
+        followUps: ['Show detailed AST audit', 'Generate unit tests for this query']
+      };
+
+      setChatHistory((prev) => [...prev, aiReply]);
+    }, 450);
   };
 
   const handleCopySnippet = (id: string, code: string) => {

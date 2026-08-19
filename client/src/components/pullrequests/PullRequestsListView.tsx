@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MagnifyingGlassIcon, ArrowDownIcon, ArrowUpIcon } from '@heroicons/react/24/outline';
-import { SlidersHorizontal, X, Settings, Table, LayoutList } from 'lucide-react';
+import { SlidersHorizontal, X, Table, LayoutList, GitPullRequest, ArrowRight, FolderGit2, Sparkles, CheckCircle2, AlertCircle, Clock, ShieldAlert } from 'lucide-react';
 import { PullRequest, ReviewStatus } from '../../types/codeReview';
 import { Card } from '../ui/Card';
 
@@ -9,105 +9,66 @@ interface PullRequestsListViewProps {
   onSelectPR: (pr: PullRequest) => void;
 }
 
-const NvidiaLogoIcon: React.FC<{ className?: string }> = ({ className = "w-3.5 h-3.5" }) => (
-  <svg viewBox="0 0 24 24" fill="currentColor" className={`${className} text-[#76b900] shrink-0`}>
-    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.8 14.5v-9l6.5 4.5-6.5 4.5z"/>
-  </svg>
-);
-
-const getStatusCode = (status: ReviewStatus, prNumber: number) => {
+const getStatusBadge = (status: ReviewStatus) => {
   switch (status) {
     case 'approved':
-    case 'completed':
       return {
-        code: '200',
-        bg: 'bg-[#052e16] text-[#4ade80] border-[#166534]',
-        label: 'Review Positive'
+        label: 'Approved',
+        icon: CheckCircle2,
+        bg: 'bg-[#052e16]/80 text-[#4ade80] border-[#166534]',
+        dot: 'bg-[#4ade80]',
       };
     case 'changes_requested':
-      if (prNumber === 142) {
-        return {
-          code: '200',
-          bg: 'bg-[#052e16] text-[#4ade80] border-[#166534]',
-          label: 'Security Risk Detected'
-        };
-      }
       return {
-        code: '200',
-        bg: 'bg-[#052e16] text-[#4ade80] border-[#166534]',
-        label: 'Awaiting Response'
+        label: 'Changes Requested',
+        icon: AlertCircle,
+        bg: 'bg-[#3f1212]/80 text-[#f87171] border-[#7f1d1d]',
+        dot: 'bg-[#f87171]',
       };
     case 'in_progress':
       return {
-        code: '200',
-        bg: 'bg-[#052e16] text-[#4ade80] border-[#166534]',
-        label: 'Reviewing...'
+        label: 'In Progress',
+        icon: Clock,
+        bg: 'bg-[#172554]/80 text-[#60a5fa] border-[#1e40af]',
+        dot: 'bg-[#60a5fa] animate-pulse',
+      };
+    case 'completed':
+      return {
+        label: 'Completed',
+        icon: CheckCircle2,
+        bg: 'bg-[#052e16]/80 text-[#34d399] border-[#047857]',
+        dot: 'bg-[#34d399]',
       };
     default:
       return {
-        code: '200',
-        bg: 'bg-[#052e16] text-[#4ade80] border-[#166534]',
-        label: 'Reviewed'
+        label: 'Pending',
+        icon: Clock,
+        bg: 'bg-[#21262d] text-zinc-300 border-[#30363d]',
+        dot: 'bg-zinc-400',
       };
   }
 };
 
-const getMockDateString = (createdAtStr: string, prNumber: number) => {
-  const timeMap: Record<number, string> = {
-    142: 'Aug 13 04:29 PM',
-    141: 'Aug 13 04:22 PM',
-    140: 'Aug 13 04:17 PM',
-    139: 'Aug 13 04:04 PM',
-    138: 'Aug 13 04:04 PM',
-    137: 'Aug 13 04:03 PM',
-    136: 'Aug 13 04:02 PM',
-    135: 'Aug 13 03:50 PM',
-    134: 'Aug 13 03:49 PM',
-    133: 'Aug 13 03:48 PM',
-    132: 'Aug 13 03:48 PM',
-    131: 'Aug 13 03:47 PM',
+const formatPRDateTime = (dateStr: string, prNumber: number) => {
+  const timeMap: Record<number, { date: string; time: string }> = {
+    142: { date: 'Aug 13', time: '04:29 PM' },
+    141: { date: 'Aug 13', time: '04:22 PM' },
+    140: { date: 'Aug 13', time: '04:17 PM' },
+    139: { date: 'Aug 13', time: '04:04 PM' },
+    138: { date: 'Aug 13', time: '04:04 PM' },
+    137: { date: 'Aug 13', time: '04:03 PM' },
+    136: { date: 'Aug 13', time: '04:02 PM' },
+    135: { date: 'Aug 13', time: '03:50 PM' },
+    134: { date: 'Aug 13', time: '03:49 PM' },
+    133: { date: 'Aug 13', time: '03:48 PM' },
+    132: { date: 'Aug 13', time: '03:48 PM' },
+    131: { date: 'Aug 13', time: '03:47 PM' },
   };
   if (timeMap[prNumber]) return timeMap[prNumber];
-  return 'Aug 13 03:45 PM';
+  return { date: 'Aug 13', time: '03:45 PM' };
 };
 
-const getMockGenerationId = (prNumber: number) => {
-  const genMap: Record<number, string> = {
-    142: 'gen-1786618796-D9hN3GwxuyP0S8Ti5rqP',
-    141: 'gen-1786618371-XB4ROuOaSASH8JZnR4jZW',
-    140: 'gen-1786618062-H8RMSGn8rzs9T06KfcAp',
-    139: 'gen-1786617260-AXwH7PEt6rxBzKY20Ngu',
-    138: 'gen-1786617242-MV18142p17mJd9nhcY0K',
-    137: 'gen-1786617208-gfMJus3hEZ6gUgFajYwH',
-    136: 'gen-1786617147-BfmiH9IB8ixgvNnekaUd',
-    135: 'gen-1786616404-tTcILDBC3doqy4gKHc2W',
-    134: 'gen-1786616383-FO0lrQcb1iqgP1eyapb0',
-    133: 'gen-1786616302-STGu0LJOvTcdgFEUfOUs',
-    132: 'gen-1786616292-b5wCQw198B76KR2aJLYO',
-    131: 'gen-1786616277-ml1v9bfUpWHEIvgpo1XN',
-  };
-  return genMap[prNumber] || `gen-178661${prNumber}00-x9K0qL2mP8N1`;
-};
-
-const getMockLatency = (prNumber: number) => {
-  const latencyMap: Record<number, string> = {
-    142: '582ms',
-    141: '378ms',
-    140: '485ms',
-    139: '370ms',
-    138: '395ms',
-    137: '365ms',
-    136: '427ms',
-    135: '379ms',
-    134: '221ms',
-    133: '220ms',
-    132: '213ms',
-    131: '369ms',
-  };
-  return latencyMap[prNumber] || '350ms';
-};
-
-const getMockTimestamp = (prNumber: number) => {
+const getPRTimestamp = (prNumber: number) => {
   return 1000 - prNumber;
 };
 
@@ -154,8 +115,10 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
     const matchesSearch =
       pr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pr.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      pr.author.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pr.repoFullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      getMockGenerationId(pr.number).toLowerCase().includes(searchQuery.toLowerCase());
+      pr.number.toString().includes(searchQuery.toLowerCase()) ||
+      pr.id.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || pr.status === statusFilter;
     const matchesRepo = selectedRepos.length === 0 || selectedRepos.includes(pr.repoFullName);
@@ -164,8 +127,8 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
   });
 
   const sortedPRs = [...filteredPRs].sort((a, b) => {
-    const timeA = getMockTimestamp(a.number);
-    const timeB = getMockTimestamp(b.number);
+    const timeA = getPRTimestamp(a.number);
+    const timeB = getPRTimestamp(b.number);
     return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
   });
 
@@ -174,60 +137,75 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-zinc-100 tracking-tight">Pull Requests</h1>
-          <p className="text-sm text-zinc-400 mt-1">Manage automated AI code reviews across active pull requests.</p>
+          <h1 className="text-xl font-bold text-zinc-100 tracking-tight">
+            Pull Requests
+          </h1>
+          <p className="text-sm text-zinc-400 mt-1">Manage and inspect automated AI code reviews across active pull requests.</p>
         </div>
 
         {/* Right side: Search & Filters */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
-          {/* View mode switcher */}
-          <div className="flex items-center bg-[#16171d] border border-[#2d303d] rounded-lg p-1">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-1.5 rounded text-xs transition-colors cursor-pointer ${
-                viewMode === 'table' ? 'bg-[#21262d] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Clean Table View"
-            >
-              <Table className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded text-xs transition-colors cursor-pointer ${
-                viewMode === 'cards' ? 'bg-[#21262d] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-              title="Expanded Cards View"
-            >
-              <LayoutList className="w-4 h-4" />
-            </button>
-          </div>
-
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto shrink-0">
           {/* Search box */}
           <div className="relative w-full sm:w-64">
-            <MagnifyingGlassIcon className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <MagnifyingGlassIcon className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Search pull requests..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#16171d] border border-[#2d303d] text-zinc-200 text-sm rounded-lg pl-10 pr-4 py-2.5 focus:outline-none focus:border-zinc-500 h-10 font-sans shadow-sm"
+              className="w-full bg-[#16171d] border border-[#2d303d] text-zinc-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-zinc-500 h-8 font-sans shadow-sm"
             />
+          </div>
+
+          {/* View mode switcher (Positioned between search and filters) */}
+          <div className="h-8 flex items-center bg-[#16171d] border border-[#2d303d] rounded-lg p-0.5">
+            <div className="relative group">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`p-1 rounded text-xs transition-colors cursor-pointer flex items-center justify-center ${
+                  viewMode === 'table' ? 'bg-[#21262d] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Clean Table View"
+              >
+                <Table className="w-3.5 h-3.5" />
+              </button>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1c202e] text-zinc-200 text-[10px] px-2 py-0.5 rounded shadow-lg whitespace-nowrap border border-[#303648] z-30 font-sans">
+                Clean Table View
+              </div>
+            </div>
+            <div className="relative group">
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`p-1 rounded text-xs transition-colors cursor-pointer flex items-center justify-center ${
+                  viewMode === 'cards' ? 'bg-[#21262d] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+                title="Expanded Cards View"
+              >
+                <LayoutList className="w-3.5 h-3.5" />
+              </button>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1c202e] text-zinc-200 text-[10px] px-2 py-0.5 rounded shadow-lg whitespace-nowrap border border-[#303648] z-30 font-sans">
+                Expanded Cards View
+              </div>
+            </div>
           </div>
 
           {/* Custom Status & Repo Dropdown Popover */}
           <div className="relative w-full sm:w-auto flex items-center" ref={dropdownRef}>
-            <div className="relative">
+            <div className="relative group">
               <button
                 onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                className={`flex items-center justify-center bg-[#16171d] border hover:bg-[#21262d] rounded-lg p-2.5 h-10 w-10 focus:outline-none cursor-pointer transition-colors shadow-sm ${
+                className={`flex items-center justify-center bg-[#16171d] border hover:bg-[#21262d] rounded-lg h-8 w-8 focus:outline-none cursor-pointer transition-colors shadow-sm ${
                   statusFilter !== 'all' || selectedRepos.length > 0
                     ? 'text-[#c0f200] border-[#c0f200]/40 bg-[#c0f200]/5'
                     : 'text-zinc-300 border-[#2d303d]'
                 }`}
-                title="Filters"
+                title="Filter by status & repository"
               >
-                <SlidersHorizontal className="w-4 h-4" />
+                <SlidersHorizontal className="w-3.5 h-3.5" />
               </button>
+              <div className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1c202e] text-zinc-200 text-[10px] px-2 py-0.5 rounded shadow-lg whitespace-nowrap border border-[#303648] z-30 font-sans">
+                Filters
+              </div>
 
               {(statusFilter !== 'all' || selectedRepos.length > 0) && (
                 <button
@@ -313,138 +291,192 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
         </div>
       </div>
 
-      {/* Clean Table (OpenRouter style) */}
+      {/* Clean Table View */}
       {viewMode === 'table' ? (
-        <div className="bg-[#090a0f] border border-[#1c202c] rounded-xl shadow-2xl overflow-hidden text-left">
-          {/* Header Row */}
-          <div className="hidden lg:grid grid-cols-[140px_180px_130px_1fr_80px_70px_60px_90px_40px] items-center gap-3 px-4 py-3 bg-[#0d0e14] border-b border-[#1c202c] text-[12px] font-sans font-medium text-zinc-400">
-            <button
-              onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-              className="flex items-center gap-1 hover:text-zinc-200 transition-colors cursor-pointer text-left focus:outline-none"
-            >
-              <span>Date</span>
-              {sortDirection === 'desc' ? (
-                <ArrowUpIcon className="w-3 h-3 text-zinc-500" />
-              ) : (
-                <ArrowDownIcon className="w-3 h-3 text-zinc-500" />
-              )}
-            </button>
-            <div>Model</div>
-            <div>Final Provider</div>
-            <div>Generation ID</div>
-            <div className="text-center">Status</div>
-            <div className="text-center">Attempts</div>
-            <div className="text-center">Key</div>
-            <div className="text-right">Latency</div>
-            <div className="flex justify-end">
-              <Settings className="w-3.5 h-3.5 text-zinc-500 hover:text-zinc-300 transition-colors cursor-pointer" />
-            </div>
-          </div>
-
-          {/* Table Body */}
-          <div className="divide-y divide-[#151822]">
-            {sortedPRs.map((pr) => {
-              const dateStr = getMockDateString(pr.createdAt, pr.number);
-              const genId = getMockGenerationId(pr.number);
-              const latency = getMockLatency(pr.number);
-              const statusObj = getStatusCode(pr.status, pr.number);
-
-              return (
-                <div
-                  key={pr.id}
-                  onClick={() => onSelectPR(pr)}
-                  className="grid grid-cols-1 lg:grid-cols-[140px_180px_130px_1fr_80px_70px_60px_90px_40px] items-center gap-3 px-4 py-3 hover:bg-[#131622] transition-colors cursor-pointer group"
+        <div className="bg-[#13151f] border border-[#262b3a] rounded-xl overflow-hidden text-left">
+          <div className="overflow-x-auto">
+            <div className="min-w-[960px]">
+              {/* Table Header (Keeps crisp dark header) */}
+              <div className="grid grid-cols-[85px_60px_1fr_210px_120px_150px_90px] items-center gap-4 px-4 py-2.5 bg-[#0e1017] border-b border-[#262b3a] text-[12px] font-sans font-medium text-zinc-400">
+                {/* Column 1: Date */}
+                <button
+                  onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="flex items-center gap-1 hover:text-zinc-200 transition-colors cursor-pointer text-left focus:outline-none"
                 >
-                  {/* Column 1: Date */}
-                  <div className="text-xs font-sans text-zinc-300 whitespace-nowrap">
-                    {dateStr}
-                  </div>
+                  <span>Date</span>
+                  {sortDirection === 'desc' ? (
+                    <ArrowUpIcon className="w-3 h-3 text-zinc-500" />
+                  ) : (
+                    <ArrowDownIcon className="w-3 h-3 text-zinc-500" />
+                  )}
+                </button>
 
-                  {/* Column 2: Model */}
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <NvidiaLogoIcon className="w-3.5 h-3.5 shrink-0" />
-                    <span className="text-xs font-semibold text-zinc-200 truncate">
-                      Nemotron 3.5 Lightning
-                    </span>
-                  </div>
+                {/* Column 2: ID */}
+                <div>ID</div>
 
-                  {/* Column 3: Final Provider */}
-                  <div className="flex items-center">
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#072412] text-[#4ade80] border border-[#14532d]">
-                      <NvidiaLogoIcon className="w-3 h-3 text-[#4ade80]" />
-                      NVIDIA
-                    </span>
-                  </div>
+                {/* Column 3: Title */}
+                <div>Title</div>
 
-                  {/* Column 4: Generation ID */}
-                  <div className="min-w-0 flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-zinc-200 group-hover:text-[#c0f200] transition-colors truncate">
-                      {genId}
-                    </span>
-                  </div>
+                {/* Column 4: Repo */}
+                <div className="pr-4">Repo</div>
 
-                  {/* Column 5: Status */}
-                  <div className="flex lg:justify-center">
-                    <span className={`inline-flex items-center justify-center min-w-[38px] px-2 py-0.5 rounded-full text-[11px] font-mono font-bold border ${statusObj.bg}`}>
-                      {statusObj.code}
-                    </span>
-                  </div>
+                {/* Column 5: Diff */}
+                <div className="pl-4">Diff</div>
 
-                  {/* Column 6: Attempts */}
-                  <div className="lg:text-center font-mono text-xs text-zinc-400">
-                    1
-                  </div>
+                {/* Column 6: Status (Left-aligned) */}
+                <div>Status</div>
 
-                  {/* Column 7: Key */}
-                  <div className="flex lg:justify-center">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#181c26] border border-[#2b3242] text-zinc-300">
-                      OR
-                    </span>
-                  </div>
+                {/* Column 7: Action */}
+                <div className="text-right">Action</div>
+              </div>
 
-                  {/* Column 8: Latency */}
-                  <div className="lg:text-right font-mono text-xs text-zinc-400">
-                    {latency}
+              {/* Table Body (Clean pleasant dark bg with subtle dividers and hover state) */}
+              <div className="divide-y divide-[#1f2433]">
+                {sortedPRs.length === 0 ? (
+                  <div className="p-12 text-center text-zinc-500 text-sm">
+                    No pull requests match the current filters.
                   </div>
+                ) : (
+                  sortedPRs.map((pr) => {
+                    const dateTime = formatPRDateTime(pr.createdAt, pr.number);
+                    const statusObj = getStatusBadge(pr.status);
 
-                  {/* Column 9: Action Settings */}
-                  <div className="flex justify-end">
-                    <Settings className="w-3.5 h-3.5 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-                  </div>
-                </div>
-              );
-            })}
+                    return (
+                      <div
+                        key={pr.id}
+                        onClick={() => onSelectPR(pr)}
+                        className="grid grid-cols-[85px_60px_1fr_210px_120px_150px_90px] items-center gap-4 px-4 py-2.5 bg-[#13151f] hover:bg-[#1c212e] transition-colors cursor-pointer group"
+                      >
+                        {/* Column 1: Date & Time Stacked */}
+                        <div className="flex flex-col justify-center leading-none">
+                          <span className="text-xs font-sans text-zinc-300 whitespace-nowrap">{dateTime.date}</span>
+                          <span className="text-[10px] font-mono text-zinc-500 mt-1 whitespace-nowrap">{dateTime.time}</span>
+                        </div>
+
+                        {/* Column 2: ID */}
+                        <div className="font-mono text-xs font-bold text-zinc-400 group-hover:text-zinc-200 transition-colors">
+                          #{pr.number}
+                        </div>
+
+                        {/* Column 3: Title */}
+                        <div className="min-w-0 pr-2">
+                          <span className="text-xs font-medium text-zinc-200 group-hover:text-[#c0f200] transition-colors truncate block">
+                            {pr.title}
+                          </span>
+                        </div>
+
+                        {/* Column 4: Repo */}
+                        <div className="min-w-0 flex items-center gap-1.5 text-zinc-300 pr-4">
+                          <FolderGit2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                          <span className="text-xs font-mono truncate" title={pr.repoFullName}>
+                            {pr.repoFullName}
+                          </span>
+                        </div>
+
+                        {/* Column 5: Diff */}
+                        <div className="flex items-center gap-2 font-mono text-xs pl-4">
+                          <span className="text-emerald-400 font-semibold">+{pr.additions}</span>
+                          <span className="text-rose-400 font-semibold">-{pr.deletions}</span>
+                        </div>
+
+                        {/* Column 6: Status (Left-aligned) */}
+                        <div className="flex items-center">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-medium border ${statusObj.bg}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusObj.dot}`}></span>
+                            <span>{statusObj.label}</span>
+                          </span>
+                        </div>
+
+                        {/* Column 7: Review Button */}
+                        <div className="flex justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSelectPR(pr);
+                            }}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-[#181c28] text-zinc-200 hover:bg-[#c0f200] hover:text-black border border-[#2d3448] hover:border-[#c0f200] transition-all cursor-pointer shadow-sm group-hover:border-zinc-500"
+                          >
+                            <span>Review</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         </div>
       ) : (
-        /* Cards View (Alternative View) */
+        /* Cards View */
         <Card>
           <div className="divide-y divide-[#282a36]">
-            {sortedPRs.map((pr) => (
-              <div
-                key={pr.id}
-                onClick={() => onSelectPR(pr)}
-                className="p-5 flex items-center justify-between hover:bg-[#16171d] cursor-pointer transition-colors group"
-              >
-                <div className="space-y-1.5 min-w-0">
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <span className="text-sm font-mono font-bold text-zinc-500">#{pr.number}</span>
-                    <h3 className="text-[14px] font-semibold text-zinc-200 group-hover:text-[#c0f200] transition-colors truncate">
-                      {pr.title}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-xs text-zinc-500 font-mono">
-                    <span>{pr.repoFullName}</span>
-                    <span>•</span>
-                    <span className="text-zinc-400">{pr.author.name}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs font-mono text-emerald-400 font-bold">+{pr.additions}</span>
-                  <span className="text-xs font-mono text-rose-400 font-bold">-{pr.deletions}</span>
-                </div>
+            {sortedPRs.length === 0 ? (
+              <div className="p-12 text-center text-zinc-500 text-sm">
+                No pull requests match the current filters.
               </div>
-            ))}
+            ) : (
+              sortedPRs.map((pr) => {
+                const dateTime = formatPRDateTime(pr.createdAt, pr.number);
+                const statusObj = getStatusBadge(pr.status);
+
+                return (
+                  <div
+                    key={pr.id}
+                    onClick={() => onSelectPR(pr)}
+                    className="p-5 grid grid-cols-1 md:grid-cols-[1fr_170px_100px_100px] items-center gap-4 hover:bg-[#16171d] cursor-pointer transition-colors group"
+                  >
+                    {/* Col 1: ID, Title & Metadata */}
+                    <div className="space-y-1.5 min-w-0">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-sm font-mono font-bold text-zinc-500">#{pr.number}</span>
+                        <h3 className="text-[14px] font-semibold text-zinc-200 group-hover:text-[#c0f200] transition-colors truncate">
+                          {pr.title}
+                        </h3>
+                      </div>
+
+                      <div className="flex items-center gap-3 text-xs text-zinc-400 font-sans flex-wrap">
+                        <div className="flex items-center gap-1.5 font-mono text-zinc-300">
+                          <FolderGit2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                          <span>{pr.repoFullName}</span>
+                        </div>
+                        <span>•</span>
+                        <span className="text-zinc-500">{dateTime.date} {dateTime.time}</span>
+                      </div>
+                    </div>
+
+                    {/* Col 2: Status at a fixed dedicated column */}
+                    <div className="flex items-center">
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-sans font-medium border ${statusObj.bg}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${statusObj.dot}`}></span>
+                        <span>{statusObj.label}</span>
+                      </span>
+                    </div>
+
+                    {/* Col 3: Diff */}
+                    <div className="flex items-center gap-2 font-mono text-xs">
+                      <span className="text-emerald-400 font-semibold">+{pr.additions}</span>
+                      <span className="text-rose-400 font-semibold">-{pr.deletions}</span>
+                    </div>
+
+                    {/* Col 4: Review Button */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSelectPR(pr);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#1a202c] text-zinc-200 hover:bg-[#c0f200] hover:text-black border border-[#2d3345] hover:border-[#c0f200] transition-all cursor-pointer shadow-sm"
+                      >
+                        <span>Review</span>
+                        <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </Card>
       )}

@@ -1,0 +1,176 @@
+---
+title: 'BYOK (Bring Your Own Key) API'
+sidebarTitle: 'BYOK & Keys'
+icon: 'key'
+description: 'Manage third-party AI provider credentials, custom endpoints, and model catalogs'
+---
+
+All BYOK endpoints are mounted under `/byok` and require an authenticated session (`authMiddleware`).
+
+API keys submitted through this router are encrypted at rest using AES-256 before insertion into PostgreSQL and cached in Redis (`byok:<userId>`) with an 86400s (24-hour) TTL.
+
+## Endpoints
+
+### 1. List Configured Providers
+`GET /byok`
+
+Returns all AI providers configured by the authenticated user. API keys are strictly omitted from the response.
+
+```json Response (200 OK)
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "modelProviderName": "openrouter",
+    "customModels": false,
+    "customBaseUrl": null,
+    "enabled": true,
+    "availableModels": [
+      {
+        "id": "deepseek/deepseek-r1",
+        "name": "DeepSeek R1",
+        "contextLength": 131072
+      }
+    ],
+    "createdAt": "2026-02-15T08:00:00.000Z"
+  }
+]
+```
+
+---
+
+### 2. Register or Update Provider Key
+`POST /byok`
+
+Registers a new provider API key or updates an existing one. If a provider for the same user already exists, it updates in-place. If updating without changing the key, masked bullet strings (`••••••••`) are ignored to prevent accidental overwrites.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `apiKey` | `string` | Yes | Real API key. Rejects bullet masking (`•`) or non-ASCII characters. |
+| `modelProviderName` | `string` | No | Provider identifier: `openai`, `openrouter`, `inception`, `vercel`, or `custom`. |
+| `customBaseUrl` | `string` | No | Custom base URL for enterprise gateways or Ollama / vLLM endpoints. |
+| `customModels` | `array \| boolean` | No | Custom model list array or boolean flag. |
+| `enabled` | `boolean` | No | Whether this provider is active for review execution (default `true`). |
+
+```json Request Body
+{
+  "modelProviderName": "openrouter",
+  "apiKey": "sk-or-v1-abcdef1234567890...",
+  "enabled": true
+}
+```
+
+```json Response (201 Created)
+{
+  "message": "Resource created successfully",
+  "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "models": []
+}
+```
+
+---
+
+### 3. Test & Probe Model List
+`POST /byok/model-list`
+
+Tests connectivity and queries available models from a provider without persisting the key to the database. Always appends the platform's free model catalog (`goBetterFreeModels`).
+
+```json Request Body
+{
+  "modelProviderName": "openrouter",
+  "apiKey": "sk-or-v1-abcdef1234567890..."
+}
+```
+
+```json Response (200 OK)
+{
+  "byokModels": [
+    {
+      "id": "openai/gpt-4o",
+      "name": "GPT-4o",
+      "contextLength": 128000
+    },
+    {
+      "id": "1",
+      "modelProviderName": "goBetter",
+      "customModels": false,
+      "customBase": "https://api.inceptionlabs.ai/v1/chat/completions",
+      "availableModels": [...]
+    }
+  ]
+}
+```
+
+---
+
+### 4. Get Active User Model Catalog
+`GET /byok/model-list`
+
+Retrieves all available models across all enabled providers configured by the user. If model metadata is missing in the database, queries the provider API and caches the result. Also appends the platform free models.
+
+```json Response (200 OK)
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "modelProviderName": "openrouter",
+    "customModels": false,
+    "customBase": null,
+    "availableModels": [
+      {
+        "id": "anthropic/claude-3.7-sonnet",
+        "name": "Claude 3.7 Sonnet"
+      }
+    ]
+  },
+  {
+    "id": "1",
+    "modelProviderName": "goBetter",
+    "customModels": false,
+    "customBase": "https://api.inceptionlabs.ai/v1/chat/completions",
+    "availableModels": [...]
+  }
+]
+```
+
+---
+
+### 5. List Provider Summaries
+`GET /byok/providers`
+
+Returns a lightweight list of provider connection cards for settings management.
+
+---
+
+### 6. Update Provider Settings
+`PATCH /byok/providers/:providerId`  
+`PATCH /byok/providers`
+
+Partially updates an existing provider configuration. Whitelisted fields: `modelProviderName`, `customModels`, `customBaseURL`, `enabled`, `availableModels`. Invalidates the Redis cache `byok:<userId>`.
+
+```json Request Body
+{
+  "enabled": false
+}
+```
+
+```json Response (200 OK)
+{
+  "message": "Provider updated successfully",
+  "provider": {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "modelProviderName": "openrouter",
+    "enabled": false,
+    "updatedAt": "2026-03-01T10:30:00.000Z"
+  }
+}
+```
+
+---
+
+### 7. Delete Provider
+`DELETE /byok/providers/:providerId`
+
+Deletes a configured provider by UUID or provider name alias. Clears the user's cached BYOK record in Redis.
+
+**Response**: `204 No Content`

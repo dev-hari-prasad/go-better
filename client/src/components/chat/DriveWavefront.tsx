@@ -2,7 +2,7 @@ import React from 'react';
 
 export const DriveWavefront: React.FC<{ className?: string }> = ({ className = '' }) => {
   return (
-    <div className={`grid grid-cols-4 gap-[2px] w-fit ${className}`}>
+    <div className={`grid grid-cols-4 gap-[1.5px] w-fit ${className}`}>
       {[...Array(16)].map((_, i) => {
         const row = Math.floor(i / 4);
         const col = i % 4;
@@ -10,9 +10,9 @@ export const DriveWavefront: React.FC<{ className?: string }> = ({ className = '
         return (
           <div
             key={i}
-            className="w-1 h-1 bg-zinc-500 rounded-[1px] opacity-20"
+            className="w-[2.5px] h-[2.5px] bg-zinc-500 rounded-[0.5px] opacity-20"
             style={{
-              animation: `wavefront 1.2s infinite ease-in-out`,
+              animation: `wavefront 0.9s infinite ease-in-out`,
               animationDelay: `${delay}s`,
             }}
           />

@@ -1,5 +1,5 @@
 import { Job, Worker } from 'bullmq'
-import { sanitizedPrPayload, extractedPrContent, connection, deadLetter } from '../config/queue.ts'
+import { sanitizedPrPayload, extractedPrContent, connection, deadLetter, workerOptions } from '../config/queue.ts'
 
 import { log } from 'node:console'
 
@@ -10,8 +10,9 @@ export const worker = new Worker(
         const sanitizedPayload = job.data
 
         try {
-
-            // Inicate request 
+            
+            
+            // Inicaite request 
             const [
                 patchResponse,
                 issueResponse,
@@ -41,16 +42,19 @@ export const worker = new Worker(
                 contentRequest
             }
 
+            log("Inserting to AI queue")
             // Insert payload to queue
             await extractedPrContent.add('extractedContent', {
                 body: extractedContent,
             })
 
+            log('extraction completed')
+
         } catch (error) {
             throw error
         }
     },
-    { connection }
+    { connection, ...workerOptions, concurrency: 1 }
 )
 
 // Handle failuer to direct information into DLQ

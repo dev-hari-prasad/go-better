@@ -3,8 +3,6 @@ export type processingState =
     | "WEBHOOK_RECEIVED"
     | "PAYLOAD_SANITIZED"
     | "PR_CONTENT_EXTRACTED"
-    | "REVIEW_NOTIFICATION_AWAITING"
-    | "REVIEW_NOTIFICATION_SENT"
     | "PROCESSING_COMPLETED";
 
 // State log strict JSON interface 
@@ -24,3 +22,15 @@ interface ProcessingError {
     code?: string;
     stack?: string;
 }
+
+// Human freidnly status in database
+export type reivewStatus =
+    | 'pending'
+    | 'processing'
+    | 'processing'
+    | 'completed'
+    | 'failed'
+    | 'ideal'
+    | 'all'
+
+export type reivewStatusFilter =  reivewStatus & 'all'

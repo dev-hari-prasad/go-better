@@ -6,20 +6,18 @@ import {
   integer,
   jsonb,
   check,
-  text,
   numeric
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import pullRequests from "./pullRequests.ts";
 
-// Stores review runs, results, and processing status.
 const review = pgTable(
   "review",
   {
-    reviewid: uuid("id").primaryKey().notNull(),
-    pullRequestId: uuid("pr_id")
+    id: uuid("id").primaryKey().notNull(),
+    pullRequestId: numeric("pr_id")
       .notNull()
-      .references(() => pullRequests.id, {
+      .references(() => pullRequests.prId, {
         onDelete: "cascade",
       }),
     state: varchar("state", { length: 56 })
@@ -31,12 +29,11 @@ const review = pgTable(
     // Operation fields eg. webhook, manual, or retry
     triggeredBy: varchar("trigged_by").notNull(),
     attemptNumber: integer("attempt_number").default(1).notNull(),
-    errorMessage: text("error_message"),
-    durationMs: numeric("duration_md").notNull(),
+    errorMessage: varchar("error_message"),
+    durationMs: integer("duration_ms").notNull(),
 
     // Result metadata
-    summary: text("review_summary"),
-    resultBlob: jsonb('result_blob'),
+    reviewSummary: varchar("review_summary"),
     reviewedCommitSha: varchar("reviewed_commit_sha"),
 
     //Raw review result

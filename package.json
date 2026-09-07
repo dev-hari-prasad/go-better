@@ -1,0 +1,13 @@
+{
+	"scripts": {
+		"docs:dev": "mintlify dev --port 3333",
+		"docs:validate": "mintlify validate"
+	},
+	"dependencies": {
+		"@types/cookie-parser": "^1.4.10",
+		"cookie-parser": "^1.4.7"
+	},
+	"devDependencies": {
+		"mintlify": "^4.2.851"
+	}
+}

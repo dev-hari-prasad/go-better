@@ -11,5 +11,14 @@ export { default as aiConversation } from './aiConversations.ts'
 export { default as aiMessage, thumbsFeedback } from './aiMessage.ts'
 
 // Setting and configuration
-export { default as workspaceSettings } from './workspaceSettings.ts'
+export { default as workspaceSettings } from './workspace.ts'
 export { default as byok } from './byok.ts'
+
+// Usage
+export {default as usage} from './usage.ts'
+
+//Otp verficiation
+export {default as otpVerification} from './otpVerification.ts'
+
+// Sessions 
+export {default as session} from './sessions.ts'

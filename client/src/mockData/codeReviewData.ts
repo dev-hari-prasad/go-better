@@ -1,4 +1,4 @@
-import { Repository, PullRequest, DiffFile, AIFinding, ActivityEvent, UserSettings } from '../types/codeReview';
+import { Repository, PullRequest, DiffFile, AIFinding, ActivityEvent, UserSettings, LatestCodeReview } from '../types/codeReview';
 
 export const mockRepositories: Repository[] = [
   {
@@ -464,6 +464,7 @@ export const mockUserSettings: UserSettings = {
   geminiApiKey: '',
   vercelApiKey: '',
   openRouterApiKey: '',
+  inceptionApiKey: '',
   customEndpoints: [],
   autoReviewPullRequests: true,
   severityThreshold: 'suggestion',
@@ -483,3 +484,54 @@ export const mockUserSettings: UserSettings = {
   notifyOnCritical: true,
   teamMembersCount: 8,
 };
+
+export const mockLatestCodeReviews: LatestCodeReview[] = [
+  {
+    id: 'rev-24',
+    pullRequestId: '24',
+    prNumber: 24,
+    prTitle: 'feat: Multi-Tier Token Bucket Rate Limiter with In-Memory Driver, Metrics & Express/Hono Middleware',
+    repoFullName: 'dev-hari-prasad/test-hooks',
+    status: 'completed',
+    score: 92,
+    summary: 'Robust token bucket algorithm implementation. Well-structured middleware with clean error boundary. Suggested adding jitter to backoff intervals.',
+    criticalCount: 0,
+    warningCount: 1,
+    suggestionCount: 2,
+    totalFindings: 3,
+    model: 'Gobe AI (Claude 3.5 Sonnet)',
+    reviewedAt: '12 minutes ago',
+  },
+  {
+    id: 'rev-23',
+    pullRequestId: '23',
+    prNumber: 23,
+    prTitle: 'feat: Distributed Lock & Lease Manager with Heartbeat Auto-Renewal',
+    repoFullName: 'dev-hari-prasad/test-hooks',
+    status: 'approved',
+    score: 95,
+    summary: 'High quality distributed consensus locking with graceful heartbeat degradation. Zero race conditions detected across async lock acquisition paths.',
+    criticalCount: 0,
+    warningCount: 0,
+    suggestionCount: 1,
+    totalFindings: 1,
+    model: 'Gobe AI (GPT-4o)',
+    reviewedAt: '1 hour ago',
+  },
+  {
+    id: 'rev-142',
+    pullRequestId: 'pr-142',
+    prNumber: 142,
+    prTitle: 'Refactor Auth middleware & session validation logic',
+    repoFullName: 'acme-corp/hono-rabbit',
+    status: 'changes_requested',
+    score: 74,
+    summary: 'Structural improvements to JWT session caching. 1 critical timing vulnerability identified in crypto token comparison routine.',
+    criticalCount: 1,
+    warningCount: 2,
+    suggestionCount: 3,
+    totalFindings: 6,
+    model: 'Gobe AI (Claude 3.5 Sonnet)',
+    reviewedAt: '3 hours ago',
+  },
+];

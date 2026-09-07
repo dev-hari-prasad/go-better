@@ -1,0 +1,135 @@
+---
+title: 'Reviews API'
+sidebarTitle: 'Reviews'
+icon: 'magnifying-glass-chart'
+description: 'Fetch review analysis, overview dashboard scores, and trigger manual re-reviews'
+---
+
+All review endpoints are mounted under `/review` and require an authenticated session (`authMiddleware`).
+
+## Endpoints
+
+### 1. Get PR Review Details
+`GET /review/information/:prId`
+
+Retrieves the full AI review record and synchronized pull request metadata for a specific PR.
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `prId` | `string \| number` | Yes | GitHub PR ID or database pull request identifier. |
+
+```json Response (200 OK)
+[
+  {
+    "id": "c3d1f044-88ab-4c22-901e-abcdef123456",
+    "prId": "1049281729",
+    "reviewStatus": "completed",
+    "reviewSummary": "The PR introduces Redis caching to BYOK provider lookups. Found 1 potential concurrency race condition in cache eviction.",
+    "reviewdSha": "e4d3c2b1a0987654321fedcba0987654321fedcb",
+    "reviewStartedAt": "2026-03-01T10:14:00.000Z",
+    "reviewCompletedAt": "2026-03-01T10:15:12.000Z",
+    "reviewRawJSON": {
+      "summary": {
+        "overview": "Clear caching implementation with isolated TTLs.",
+        "intent": "Optimize provider lookups under high review load.",
+        "risk": "medium",
+        "findingsCount": 1
+      },
+      "comments": [
+        {
+          "file": "src/lib/redis/redisClient.ts",
+          "line": 45,
+          "endLine": 48,
+          "severity": "MAJOR",
+          "confidence": 90,
+          "title": "Unbounded cache growth on dynamic user keys",
+          "comment": "Cache keys omit an explicit TTL expiration on insertion, which can lead to memory exhaustion.",
+          "failureScenario": "Under high load with 10k+ unique users, Redis maxmemory will be exceeded.",
+          "suggestedFix": "Pass 'EX', 86400 to redis.set() call."
+        }
+      ],
+      "confidence": {
+        "overall": 85,
+        "performance": 90,
+        "security": 95
+      },
+      "agenticFixPrompt": null
+    },
+    "prTitle": "feat: add redis cache layer to byok lookup",
+    "prState": "open",
+    "prIsDraft": false,
+    "prIsMerged": false,
+    "prHeadBranch": "feat/redis-cache",
+    "prBaseBranch": "main",
+    "prCommitCount": 3,
+    "prAddtions": 145,
+    "prDeletions": 28,
+    "changedFiles": 4,
+    "prHtmlUrl": "https://github.com/owner/core-api/pull/42"
+  }
+]
+```
+
+---
+
+### 2. Overview Reviews List
+`GET /review/list`
+
+Returns the 3 most recent reviews formatted specifically for the dashboard overview, with pre-computed quality scores and finding counts.
+
+#### Scoring Formula
+- If `confidence.overall` is present: uses `overall * 100` (or directly if > 1).
+- If zero findings exist: returns `98`.
+- Otherwise: `Math.max(50, Math.min(99, 100 - (critical * 15) - (warning * 5) - (suggestion * 2)))`.
+
+```json Response (200 OK)
+[
+  {
+    "id": "c3d1f044-88ab-4c22-901e-abcdef123456",
+    "prId": "1049281729",
+    "pullRequestId": "1049281729",
+    "prDbId": "e6a4b12c-34d5-4e78-90ab-cdef12345678",
+    "prNumber": 42,
+    "prTitle": "feat: add redis cache layer to byok lookup",
+    "repoFullName": "owner/core-api",
+    "status": "completed",
+    "score": 85,
+    "summary": "Clear caching implementation with isolated TTLs.",
+    "criticalCount": 0,
+    "warningCount": 1,
+    "suggestionCount": 0,
+    "totalFindings": 1,
+    "reviewedAt": "2026-03-01T10:15:12.000Z"
+  }
+]
+```
+
+---
+
+### 3. Re-trigger Review
+`POST /review/:prId`
+
+Manually triggers a new AI review run for an existing PR. Reads the stored GitHub PR payload (`bodyBlob`) from PostgreSQL and immediately pushes it into the `sanitizedPrPayload` BullMQ queue.
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `prId` | `string \| number` | Yes | GitHub PR ID. Can also be supplied in the JSON body. |
+
+```bash cURL
+curl -X POST "http://localhost:5000/review/1049281729" \
+  -H "Cookie: session=<session_token>"
+```
+
+```json Response (200 OK)
+{
+  "message": "Review started."
+}
+```
+
+#### Error Responses
+- `404 Not Found`: Pull request record or stored GitHub webhook payload does not exist.
+- `500 Internal Server Error`: Failed to enqueue the payload to Redis.

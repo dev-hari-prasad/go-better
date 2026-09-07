@@ -1,0 +1,78 @@
+---
+title: 'Pull Requests API'
+sidebarTitle: 'Pull Requests'
+icon: 'code-pull-request'
+description: 'Query synchronized pull requests, apply status/repo filters, and fetch summaries'
+---
+
+All pull request endpoints are mounted under `/pull-request` and require an authenticated session (`authMiddleware`).
+
+## Endpoints
+
+### 1. List Pull Requests
+`GET /pull-request/list`  
+`GET /pull-request/list/:lastUpdatedAt`
+
+Returns a paginated list of up to 20 pull requests for the authenticated user, ordered by `updatedAt`.
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `lastUpdatedAt` | `string \| number` | No | Cursor timestamp. Returns PRs updated at or before this date (`<=`). |
+| `search` | `string` | No | Case-insensitive substring search matching PR title. |
+| `reviewStatus` | `string` | No | Filter by review status: `pending`, `completed`, `failed`, or `all`. |
+| `repo` | `string \| string[]` | No | Filter by repository name (e.g. `repo=acme/api`). Repeat param for multiple repos. |
+| `order` | `string` | No | Sort direction on `updatedAt`: `desc` (default) or `asc`. |
+
+```bash cURL
+curl -X GET "http://localhost:5000/pull-request/list?reviewStatus=completed&order=desc" \
+  -H "Cookie: session=<session_token>"
+```
+
+```json Response (200 OK)
+[
+  {
+    "title": "feat: add redis cache layer to byok lookup",
+    "prId": "1049281729",
+    "number": 42,
+    "repositoryName": "owner/core-api",
+    "diff": "https://github.com/owner/core-api/pull/42.diff",
+    "additions": 145,
+    "deletions": 28,
+    "status": "completed",
+    "createdAt": "2026-03-01T10:00:00.000Z",
+    "headBranch": "feat/redis-cache",
+    "baseBranch": "main",
+    "updatedAt": "2026-03-01T10:15:00.000Z",
+    "htmlUrl": "https://github.com/owner/core-api/pull/42"
+  }
+]
+```
+
+---
+
+### 2. Condensed PR Summary for Chat
+`GET /pull-request/list/summary`
+
+Returns a lightweight list of up to 20 pull requests designed for UI context selectors and chat dropdowns.
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `updatedAt` | `string` | No | Lower-bound date filter. Only returns PRs updated on or after this timestamp (`>=`). |
+| `search` | `string` | No | Case-insensitive substring search on PR title. |
+
+```json Response (200 OK)
+[
+  {
+    "id": "e6a4b12c-34d5-4e78-90ab-cdef12345678",
+    "prId": "1049281729",
+    "number": 42,
+    "title": "feat: add redis cache layer to byok lookup",
+    "createdAt": "2026-03-01T10:00:00.000Z",
+    "htmlUrl": "https://github.com/owner/core-api/pull/42"
+  }
+]
+```

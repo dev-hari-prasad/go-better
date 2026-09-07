@@ -1,23 +1,22 @@
-import { generateText } from "ai";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { Job, Worker } from 'bullmq'
-import { connection, extractedPrContent, deadLetter, reviewNotification } from '../config/queue.ts'
+import { connection, extractedPrContent, deadLetter, workerOptions } from '../config/queue.ts'
 import { CODE_REVIEW_SYSTEM_PROMPT, REVIEW_MODES } from "../config/prompts.ts";
 import { log } from "node:console";
+import { db } from "../database/dbClient.ts";
+import review from "../database/schema/review.ts";
+import pullRequests from "../database/schema/pullRequests.ts";
+import { eq } from "drizzle-orm";
+import { parseReview } from "../utils/parseReview.ts";
+import { aiGeneratetext } from "../service/ai.service.ts";
 
 // API key and gateway formation
-const apiKey = process.env.AI_GATEWAY_API_KEY;
+const apiKey = process.env.AI_API_KEY;
 
 if (!apiKey) {
-  throw new Error("Missing AI_GATEWAY_API_KEY");
+  throw new Error("Missing AI_API_KEY");
 }
 
-const openrouter = createOpenRouter({
-  apiKey,
-});
-
 // Handle quque and process reviews
-
 export const worker = new Worker(
     extractedPrContent.name,
     
@@ -25,58 +24,100 @@ export const worker = new Worker(
       
       try {
 
+        const startedAt = Date.now()
+        log('ai review started')
+
         // Prepear final prompt and information for review
         
         const extractedPrInfo = job.data.body
         const sanitizedPayload = extractedPrInfo.sanitizedPayload
         const pullRequest = sanitizedPayload.pull_request
 
-        const finalPrompt = {
-            systemPrompt: CODE_REVIEW_SYSTEM_PROMPT,
+        // For when we insert data in db 
+                const pullRequestDbID = sanitizedPayload.additionalInfo.pullRequestDbID
+
+                if (!pullRequestDbID) {
+                        throw new Error("Missing pullRequestDbID in job payload");
+                }
+
+                const [pullRequestOwner] = await db.select({ userId: pullRequests.userId })
+                    .from(pullRequests)
+                    .where(eq(pullRequests.id, pullRequestDbID))
+
+                if (!pullRequestOwner) {
+                    throw new Error("Pull request owner not found");
+                }
+
+        const finalPrompt = JSON.stringify({
             reviewMode: REVIEW_MODES.DEEP_DIVE,
             context: extractedPrInfo
+        }, null, 2)
+
+        // Review
+        const text = await aiGeneratetext(pullRequestOwner.userId, finalPrompt, CODE_REVIEW_SYSTEM_PROMPT)
+
+        log('review coemplted and now inserting to db')
+
+        try {
+            const reviewJson = parseReview(text)
+
+            // Insert data into review table
+            await db.insert(review).values({
+                id: pullRequestDbID,
+                pullRequestId: pullRequest.id,
+                status: 'completed',
+                triggeredBy: 'webhook',
+                attemptNumber: job.attemptsMade,
+                durationMs: Date.now() - startedAt,
+                reviewSummary: reviewJson.summary.overview,
+                rawReviewJSON: reviewJson,
+                reviewedCommitSha: pullRequest.head.sha,
+                completedAt: new Date()
+            }).onConflictDoUpdate({
+                target: review.id,
+                set: {
+                    status: 'completed',
+                    attemptNumber: job.attemptsMade,
+                    durationMs: Date.now() - startedAt,
+                    reviewSummary: reviewJson.summary.overview,
+                    rawReviewJSON: reviewJson,
+                    reviewedCommitSha: pullRequest.head.sha,
+                    completedAt: new Date()
+                }
+            })
+
+            // Update pull request review status in pullRequests table
+            const htmlUrl =
+                pullRequest?.urls?.html ||
+                pullRequest?.html_url ||
+                pullRequest?._links?.html?.href ||
+                (pullRequest?.head?.repo?.full_name && pullRequest?.number
+                    ? `https://github.com/${pullRequest.head.repo.full_name}/pull/${pullRequest.number}`
+                    : null);
+
+            await db.update(pullRequests)
+                .set({
+                    reviewStatus: 'completed',
+                    ...(htmlUrl ? { htmlUrl } : {}),
+                    updatedAt: new Date()
+                })
+                .where(eq(pullRequests.id, pullRequestDbID))
+
+            log('Put in table coempelted')
+        } catch(err) {
+            log(err)
+            throw err
         }
-          
-        const { text } = await generateText({
-            model: openrouter("nvidia/nemotron-3.5-lightning:free"),
-            prompt: JSON.stringify(finalPrompt, null, 2),
-        });
 
 
-        // Update notification queue 
-        // Useful in future not required now refer to docs/guides/queueAdnWorkers.md 
-        // await reviewNotification.add("notification", {
-        //     body: {
-        //         repository: {
-        //             id: sanitizedPayload.repository.id,
-        //             name: sanitizedPayload.repository.name,
-        //             fullName: sanitizedPayload.repository.full_name,
-        //         },
-
-        //         pullRequest: {
-        //             id: pullRequest.id,
-        //             number: sanitizedPayload.number,
-        //             title: pullRequest.title,
-        //             url: pullRequest.urls.html,
-        //             author: {
-        //                 id: pullRequest.author.id,
-        //                 username: pullRequest.author.login,
-        //             },
-        //         },
-
-        //         review: {
-        //             status: "completed",
-        //             result: text,
-        //         },
-        //     }
-        // });
+        log('review coemplted and inserted to db')
 
         } 
           catch (error) {
             throw error 
         }
     },
-    { connection }
+    { connection, ...workerOptions, concurrency: 1 }
 )
 
 // Handle failure after retries fail

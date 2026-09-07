@@ -1,84 +1,141 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  MagnifyingGlassIcon,
   ClockIcon,
   ShieldCheckIcon,
   Bars3Icon,
   SparklesIcon,
-  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { PullRequest, Repository, AIFinding } from '../../types/codeReview';
 import { ChatModal } from '../chat/ChatModal';
+import { ConversationListItem, fetchRecentConversations } from '../../services/aiChatApi';
+import { PullRequestSummary } from '../../services/pullRequestApi';
 import { SeverityBadge } from '../ui/Badge';
-import { BrainCircuit } from 'lucide-react';
+import { Github, GitPullRequest, Book, Plus } from 'lucide-react';
+import { ChatTeardrop } from '@phosphor-icons/react';
+import { GobeAiLogo } from '../ui/GobeAiLogo';
 
 interface HeaderBarProps {
   currentTab: string;
   selectedRepo: Repository | null;
   selectedPR: PullRequest | null;
+  repositories?: Repository[];
   pullRequests: PullRequest[];
   findings: AIFinding[];
   onSelectPR: (pr: PullRequest) => void;
+  onSelectRepo?: (repoId: string) => void;
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   onOpenSearch: () => void;
   onTabChange?: (tab: any) => void;
-  onOpenLanding: () => void;
+  onOpenLanding?: () => void;
+  onOpenAuth?: (mode: 'signup' | 'login') => void;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
   currentTab,
+  selectedRepo,
+  repositories = [],
   pullRequests,
   findings,
   onSelectPR,
+  onSelectRepo,
   isSidebarCollapsed,
   onToggleSidebar,
   onOpenSearch,
   onTabChange,
   onOpenLanding,
+  onOpenAuth,
 }) => {
   const [showChatModal, setShowChatModal] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
 
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const searchContainerRef = useRef<HTMLDivElement>(null);
+  // Quick Chat recent conversations (GET /conversation)
+  const [showQuickChats, setShowQuickChats] = useState(false);
+  const [quickChats, setQuickChats] = useState<ConversationListItem[]>([]);
+  const [isLoadingQuickChats, setIsLoadingQuickChats] = useState(false);
+  const [pendingConversation, setPendingConversation] = useState<ConversationListItem | null>(null);
+  const quickChatRef = useRef<HTMLDivElement>(null);
 
-  // Handle Cmd+K / Ctrl+K focus
+  const [pendingPr, setPendingPr] = useState<PullRequestSummary | null>(null);
+
+  const [userProfile, setUserProfile] = useState(() => ({
+    name: localStorage.getItem('user_profile_name') || '',
+    email: localStorage.getItem('user_profile_email') || '',
+    userId: localStorage.getItem('user_db_id') || localStorage.getItem('user_id') || '',
+    provider: localStorage.getItem('user_auth_provider') || '',
+  }));
+
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-        setShowDropdown(true);
-      }
+    const syncProfile = () => {
+      setUserProfile({
+        name: localStorage.getItem('user_profile_name') || '',
+        email: localStorage.getItem('user_profile_email') || '',
+        userId: localStorage.getItem('user_db_id') || localStorage.getItem('user_id') || '',
+        provider: localStorage.getItem('user_auth_provider') || '',
+      });
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('user-profile-updated', syncProfile);
+    window.addEventListener('user-changed', syncProfile);
+    return () => {
+      window.removeEventListener('user-profile-updated', syncProfile);
+      window.removeEventListener('user-changed', syncProfile);
+    };
   }, []);
 
   // Listen for 'open-gobe-chat' event dispatched by child components
   useEffect(() => {
-    const handleOpenGobeChat = () => setShowChatModal(true);
+    const handleOpenGobeChat = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        pr?: PullRequestSummary;
+        prId?: string | number;
+        prTitle?: string;
+      }>;
+      const prDetail = customEvent.detail?.pr || (customEvent.detail?.prId ? {
+        id: String(customEvent.detail.prId),
+        prId: customEvent.detail.prId,
+        title: customEvent.detail.prTitle || `PR #${customEvent.detail.prId}`,
+      } : null);
+
+      if (prDetail) {
+        setPendingPr(prDetail);
+      }
+      setShowChatModal(true);
+    };
     window.addEventListener('open-gobe-chat', handleOpenGobeChat);
     return () => window.removeEventListener('open-gobe-chat', handleOpenGobeChat);
   }, []);
 
-  // Handle click outside to close dropdown
+  const loadQuickChats = async () => {
+    setIsLoadingQuickChats(true);
+    try {
+      setQuickChats(await fetchRecentConversations());
+    } catch {
+      setQuickChats([]);
+    } finally {
+      setIsLoadingQuickChats(false);
+    }
+  };
+
+  // Close the Quick Chats dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setShowDropdown(false);
+      if (quickChatRef.current && !quickChatRef.current.contains(e.target as Node)) {
+        setShowQuickChats(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Escape') {
-      setShowDropdown(false);
-      searchInputRef.current?.blur();
+  const openChatWith = (conversation: ConversationListItem | null) => {
+    setShowQuickChats(false);
+    if (currentTab === 'ai-chat') {
+      // Main chat view is already mounted — tell it to bind to this conversation
+      window.dispatchEvent(
+        new CustomEvent('select-ai-chat-conversation', { detail: { conversation } })
+      );
+    } else {
+      setPendingConversation(conversation);
+      setShowChatModal(true);
     }
   };
 
@@ -93,27 +150,12 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
       case 'activity': return 'Activity & Logs';
       case 'settings': return 'Settings';
       case 'byok': return 'BYOK & Keys';
+      case 'analytics': return 'Analytics';
+      case 'roadmap': return 'Project Roadmap';
+      case 'try-public': return 'Try Public Repo';
       default: return 'Dashboard';
     }
   };
-
-  const displayedFindings = searchQuery.trim() === ''
-    ? findings.slice(0, 3)
-    : findings.filter(
-        (f) =>
-          f.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          f.explanation.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          f.filename.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 5);
-
-  const displayedPRs = searchQuery.trim() === ''
-    ? pullRequests.slice(0, 2)
-    : pullRequests.filter(
-        (pr) =>
-          pr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          pr.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          pr.author.name.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 3);
 
   return (
     <>
@@ -122,171 +164,149 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="flex items-center gap-4 flex-1">
           {/* Collapse Button, Logo and Label */}
           <div className="flex items-center gap-3 w-52 shrink-0">
-            <button
-              onClick={onToggleSidebar}
-              className="p-1 border border-[#30363d] text-zinc-400 hover:text-zinc-100 hover:bg-[#1a1b22] rounded transition-colors cursor-pointer shrink-0"
-              title={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-            >
-              <Bars3Icon className="w-4 h-4" />
-            </button>
-            <div className="flex items-center justify-center w-5 h-5 rounded bg-[#c0f200] text-black font-bold text-xs shrink-0">
-              <svg className="w-3 h-3 text-black" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-              </svg>
+            <div className="relative group flex items-center shrink-0">
+              <button
+                onClick={onToggleSidebar}
+                className="p-1 border border-[#30363d] text-zinc-400 hover:text-zinc-100 hover:bg-[#1a1b22] rounded transition-colors cursor-pointer shrink-0"
+              >
+                <Bars3Icon className="w-4 h-4" />
+              </button>
+              <div className="opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 absolute left-0 top-full mt-2 px-2.5 py-1 bg-[#1a1b22] text-zinc-100 text-xs font-medium rounded shadow-xl border border-[#232530] whitespace-nowrap z-50">
+                {isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              </div>
             </div>
-            <span className="text-xs font-semibold text-zinc-100 tracking-tight truncate flex-1">
-              {getTabLabel()}
-            </span>
+            <button
+              type="button"
+              onClick={onOpenLanding}
+              className="flex items-center gap-2 min-w-0 group/topbar-logo cursor-pointer select-none text-left bg-transparent border-0 p-0 focus:outline-none"
+              title="Open GoBetter AI Overview"
+              aria-label="Open GoBetter AI Overview"
+            >
+              <GobeAiLogo className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover/topbar-logo:scale-105" variant="brand" />
+              <span className="text-xs font-semibold text-zinc-100 tracking-tight truncate flex-1 group-hover/topbar-logo:text-zinc-200 transition-colors">
+                {getTabLabel()}
+              </span>
+            </button>
           </div>
         </div>
 
-        {/* Right section: Inline Search and Quick Chat */}
-        <div className="flex items-center gap-1.5 justify-end">
-          <div className="relative" ref={searchContainerRef}>
-            <div className="flex items-center justify-between gap-2 px-2.5 h-8 bg-[#16171d] border border-[#30363d] focus-within:border-zinc-500 rounded-lg text-xs text-zinc-400 transition-colors w-64 shadow-sm">
-              <div className="flex items-center gap-1.5 flex-1 min-w-0">
-                <MagnifyingGlassIcon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder="Search findings, PRs..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    setShowDropdown(true);
-                  }}
-                  onFocus={() => setShowDropdown(true)}
-                  onKeyDown={handleInputKeyDown}
-                  className="w-full bg-transparent text-[11px] text-zinc-200 placeholder-zinc-500 focus:outline-none"
-                />
-              </div>
-              {searchQuery ? (
+        {/* Right section: User session indicator / Sign In and Quick Chat */}
+        <div className="flex items-center gap-2 justify-end">
+          <div className="relative group flex items-center justify-center">
+            {localStorage.getItem('showMarketingPopup') === 'false' && (userProfile.userId || userProfile.email) ? (
+              <button
+                onClick={() => {
+                  if (onTabChange) {
+                    onTabChange('settings');
+                  } else {
+                    window.dispatchEvent(new CustomEvent('open-profile-modal'));
+                  }
+                }}
+                className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-[#16171d] hover:bg-[#20222a] border border-[#232530] hover:border-[#c0f200]/40 text-xs text-zinc-200 transition-all cursor-pointer shadow-xs"
+                title={`Authenticated as ${userProfile.name || userProfile.email} - click to view settings`}
+              >
+                <span className="w-2 h-2 rounded-full bg-[#c0f200] animate-pulse shrink-0" />
+                <span className="max-w-[120px] truncate font-medium">{userProfile.name || userProfile.email.split('@')[0]}</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (onOpenAuth) {
+                    onOpenAuth('signup');
+                  } else {
+                    window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'signup' } }));
+                  }
+                }}
+                className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-[#c0f200] hover:bg-[#d2ff3d] text-black text-xs font-semibold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] group"
+                title="Sign in or link your account"
+              >
+                <Github className="w-4 h-4 transition-transform group-hover:scale-110" />
+                <span>Sign In / Register</span>
+              </button>
+            )}
+          </div>
+
+          <div ref={quickChatRef} className="relative group/quick-chat flex items-center justify-center">
+            <button
+              onClick={() => {
+                setShowQuickChats((prev) => !prev);
+                void loadQuickChats();
+              }}
+              className={`group/quick-chat flex items-center justify-center w-8 h-8 rounded-lg border transition-colors cursor-pointer shadow-sm ${
+                showQuickChats
+                  ? 'bg-[#c0f200]/10 border-[#c0f200]/40 text-[#c0f200]'
+                  : 'bg-[#16171d] border-[#30363d] hover:border-zinc-500 hover:bg-[#1a1b22] text-zinc-400'
+              }`}
+            >
+              <GobeAiLogo
+                className="w-[18px] h-[18px]"
+                variant={showQuickChats ? 'brand' : 'outline-to-brand'}
+              />
+            </button>
+
+            {/* Recent conversations from GET /conversation */}
+            {showQuickChats && (
+              <div className="absolute top-full right-0 mt-2 w-72 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl p-2 z-50 animate-apple-fade">
+                {/* Start a new chat button at TOP */}
                 <button
                   onClick={() => {
-                    setSearchQuery('');
-                    searchInputRef.current?.focus();
+                    setShowQuickChats(false);
+                    setPendingConversation(null);
+                    if (currentTab === 'ai-chat') {
+                      window.dispatchEvent(new Event('new-ai-chat'));
+                    } else {
+                      setShowChatModal(true);
+                    }
                   }}
-                  className="p-0.5 hover:text-zinc-200 cursor-pointer flex items-center justify-center shrink-0"
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#16171d] hover:bg-[#21262d] border border-[#282b37] hover:border-[#c0f200]/40 text-[#c0f200] rounded-lg text-xs font-medium transition-all cursor-pointer group shadow-sm mb-2.5"
                 >
-                  <XMarkIcon className="w-3.5 h-3.5 text-zinc-500" />
+                  <Plus className="w-3.5 h-3.5 text-[#c0f200] group-hover:rotate-90 transition-transform duration-200" />
+                  <span>Start a new chat</span>
                 </button>
-              ) : (
-                <div className="flex items-center justify-center px-1.5 py-0.5 rounded border border-[#30363d] bg-[#21262d] text-zinc-500 text-[9px] font-medium uppercase tracking-widest shadow-sm shrink-0">
-                  ⌘K
+
+                <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider px-1.5 py-1 mb-1">
+                  Recent Chats
                 </div>
-              )}
-            </div>
-
-            {/* Inline Dropdown for search results */}
-            {showDropdown && (
-              <div className="absolute top-full right-0 mt-1.5 w-72 sm:w-80 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl p-2 z-[60] max-h-[460px] overflow-y-auto animate-apple-fade">
-                {displayedPRs.length > 0 && (
-                  <div className="mb-3">
-                    <div className="px-3 py-1 text-[9px] font-bold text-zinc-500 uppercase tracking-widest border-b border-[#30363d]/40 mb-1">
-                      Pull Requests
-                    </div>
-                    {displayedPRs.map((pr) => (
-                      <div
-                        key={pr.id}
-                        onClick={() => {
-                          onSelectPR(pr);
-                          onTabChange && onTabChange('reviews');
-                          setShowDropdown(false);
-                          setSearchQuery('');
-                        }}
-                        className="px-3 py-2 bg-transparent hover:bg-white/5 rounded-lg cursor-pointer transition-colors flex items-center justify-between group"
+                {isLoadingQuickChats ? (
+                  <div className="px-2 py-4 text-xs text-zinc-500 text-center">Loading…</div>
+                ) : quickChats.length === 0 ? (
+                  <div className="px-2 py-4 text-xs text-zinc-500 text-center">No previous chats yet</div>
+                ) : (
+                  <div className="max-h-64 overflow-y-auto space-y-0.5 custom-scrollbar pr-0.5">
+                    {quickChats.map((chat) => (
+                      <button
+                        key={chat.id}
+                        onClick={() => openChatWith(chat)}
+                        className="w-full flex items-center gap-2 text-left px-2.5 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] hover:text-zinc-100 rounded-lg transition-colors truncate cursor-pointer group"
                       >
-                        <div className="flex-1 min-w-0 mr-2">
-                          <h4 className="text-xs font-semibold text-zinc-200 group-hover:text-white transition-colors truncate">
-                            {pr.title}
-                          </h4>
-                          <p className="text-[10px] text-zinc-500 mt-0.5">
-                            {pr.id} • by {pr.author.name}
-                          </p>
-                        </div>
-                        <span className="text-[9px] font-mono px-1.5 py-0.2 rounded bg-zinc-800 text-zinc-400 group-hover:text-zinc-300 capitalize">
-                          {pr.status}
-                        </span>
-                      </div>
+                        <ChatTeardrop size={14} weight="regular" className="shrink-0 text-zinc-500 group-hover:text-zinc-300 transition-colors" />
+                        <span className="truncate flex-1">{chat.title}</span>
+                      </button>
                     ))}
-                  </div>
-                )}
-
-                {displayedFindings.length > 0 && (
-                  <div>
-                    <div className="px-3 py-1 text-[9px] font-bold text-zinc-500 uppercase tracking-widest border-b border-[#30363d]/40 mb-1">
-                      AI Findings
-                    </div>
-                    {displayedFindings.map((finding) => (
-                      <div
-                        key={finding.id}
-                        onClick={() => {
-                          onTabChange && onTabChange('reviews');
-                          setShowDropdown(false);
-                          setSearchQuery('');
-                        }}
-                        className="px-3 py-2 bg-transparent hover:bg-white/5 rounded-lg cursor-pointer transition-colors flex items-start gap-2.5 group"
-                      >
-                        <div className="mt-0.5 shrink-0">
-                          <SeverityBadge severity={finding.severity} size="sm" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h4 className="text-xs font-semibold text-zinc-200 group-hover:text-white transition-colors truncate">
-                            {finding.title}
-                          </h4>
-                          <p className="text-[10px] text-zinc-500 mt-0.5 truncate">
-                            {finding.filename}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {displayedPRs.length === 0 && displayedFindings.length === 0 && (
-                  <div className="py-6 text-center text-xs text-zinc-500">
-                    No results found for "{searchQuery}"
                   </div>
                 )}
               </div>
             )}
-          </div>
 
-          <div className="relative group flex items-center justify-center">
-            <button
-              onClick={onOpenLanding}
-              className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#16171d] border border-[#30363d] hover:border-zinc-500 hover:bg-[#1a1b22] text-[#c0f200] transition-colors cursor-pointer shadow-sm animate-pulse hover:animate-none"
-            >
-              <SparklesIcon className="w-4 h-4" />
-            </button>
-            <div className="opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 absolute top-full mt-2 px-2.5 py-1 bg-[#1a1b22] text-zinc-100 text-xs font-medium rounded shadow-xl border border-[#232530] whitespace-nowrap z-50">
-              Product Tour
-            </div>
-          </div>
-
-          <div className="relative group flex items-center justify-center">
-            <button
-              onClick={() => {
-                if (currentTab === 'ai-chat') {
-                  window.dispatchEvent(new Event('new-ai-chat'));
-                } else {
-                  setShowChatModal(true);
-                }
-              }}
-              className="flex items-center justify-center w-8 h-8 rounded-lg bg-[#16171d] border border-[#30363d] hover:border-zinc-500 hover:bg-[#1a1b22] text-[#c0f200] transition-colors cursor-pointer shadow-sm"
-            >
-              <BrainCircuit className="w-4 h-4" />
-            </button>
-            <div className="opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 absolute top-full mt-2 px-2.5 py-1 bg-[#1a1b22] text-zinc-100 text-xs font-medium rounded shadow-xl border border-[#232530] whitespace-nowrap z-50">
-              Quick Chat
-            </div>
+            {!showQuickChats && (
+              <div className="opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 absolute top-full mt-2 px-2.5 py-1 bg-[#1a1b22] text-zinc-100 text-xs font-medium rounded shadow-xl border border-[#232530] whitespace-nowrap z-40">
+                Quick Chat
+              </div>
+            )}
           </div>
         </div>
       </header>
 
       <ChatModal 
         isOpen={showChatModal} 
-        onClose={() => setShowChatModal(false)}
+        pullRequests={pullRequests}
+        initialConversation={pendingConversation}
+        initialPr={pendingPr}
+        onClose={() => {
+          setShowChatModal(false);
+          setPendingConversation(null);
+          setPendingPr(null);
+        }}
         onMaximize={() => {
           setShowChatModal(false);
           onTabChange && onTabChange('ai-chat');

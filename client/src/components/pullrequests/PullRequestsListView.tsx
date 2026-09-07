@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MagnifyingGlassIcon, ArrowDownIcon, ArrowUpIcon } from '@heroicons/react/24/outline';
-import { SlidersHorizontal, X, Table, LayoutList, GitPullRequest, ArrowRight, FolderGit2, Sparkles, CheckCircle2, AlertCircle, Clock, ShieldAlert } from 'lucide-react';
+import { SlidersHorizontal, X, Table, LayoutList, GitPullRequest, ArrowRight, FolderGit2, Sparkles, CheckCircle2, AlertCircle, Clock, ShieldAlert, GitBranch, GitMerge } from 'lucide-react';
 import { PullRequest, ReviewStatus } from '../../types/codeReview';
+import { fetchPullRequestList, getAuthUserId } from '../../services/pullRequestApi';
 import { Card } from '../ui/Card';
 
 interface PullRequestsListViewProps {
   pullRequests: PullRequest[];
   onSelectPR: (pr: PullRequest) => void;
+  initialStatusFilter?: string;
+  onStatusFilterChange?: (status: string) => void;
 }
 
 const getStatusBadge = (status: ReviewStatus) => {
@@ -39,6 +42,13 @@ const getStatusBadge = (status: ReviewStatus) => {
         bg: 'bg-[#052e16]/80 text-[#34d399] border-[#047857]',
         dot: 'bg-[#34d399]',
       };
+    case 'failed':
+      return {
+        label: 'Failed',
+        icon: AlertCircle,
+        bg: 'bg-[#3f1212]/80 text-[#f87171] border-[#7f1d1d]',
+        dot: 'bg-[#f87171]',
+      };
     default:
       return {
         label: 'Pending',
@@ -49,32 +59,158 @@ const getStatusBadge = (status: ReviewStatus) => {
   }
 };
 
-const formatPRDateTime = (dateStr: string, prNumber: number) => {
-  const timeMap: Record<number, { date: string; time: string }> = {
-    142: { date: 'Aug 13', time: '04:29 PM' },
-    141: { date: 'Aug 13', time: '04:22 PM' },
-    140: { date: 'Aug 13', time: '04:17 PM' },
-    139: { date: 'Aug 13', time: '04:04 PM' },
-    138: { date: 'Aug 13', time: '04:04 PM' },
-    137: { date: 'Aug 13', time: '04:03 PM' },
-    136: { date: 'Aug 13', time: '04:02 PM' },
-    135: { date: 'Aug 13', time: '03:50 PM' },
-    134: { date: 'Aug 13', time: '03:49 PM' },
-    133: { date: 'Aug 13', time: '03:48 PM' },
-    132: { date: 'Aug 13', time: '03:48 PM' },
-    131: { date: 'Aug 13', time: '03:47 PM' },
+export const formatRelativeTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInSec = Math.floor(diffInMs / 1000);
+
+  if (diffInSec < 45 && diffInSec >= 0) {
+    return 'just now';
+  }
+  if (diffInSec < 0) {
+    return 'just now';
+  }
+
+  const diffInMin = Math.floor(diffInSec / 60);
+  if (diffInMin < 60) {
+    return diffInMin === 1 ? '1 min ago' : `${diffInMin} mins ago`;
+  }
+
+  const diffInHours = Math.floor(diffInMin / 60);
+  if (diffInHours < 24) {
+    return diffInHours === 1 ? '1 hour ago' : `${diffInHours} hours ago`;
+  }
+
+  const diffInDays = Math.floor(diffInHours / 24);
+  if (diffInDays < 30) {
+    return diffInDays === 1 ? '1 day ago' : `${diffInDays} days ago`;
+  }
+
+  const diffInMonths = Math.floor(diffInDays / 30);
+  if (diffInMonths < 12) {
+    return diffInMonths === 1 ? '1 month ago' : `${diffInMonths} months ago`;
+  }
+
+  const diffInYears = Math.floor(diffInDays / 365);
+  return diffInYears === 1 ? '1 year ago' : `${diffInYears} years ago`;
+};
+
+const formatPRDateTime = (dateStr: string) => {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return { date: '—', relative: '', time: '' };
+  return {
+    date: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+    relative: formatRelativeTime(dateStr),
+    time: date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
   };
-  if (timeMap[prNumber]) return timeMap[prNumber];
-  return { date: 'Aug 13', time: '03:45 PM' };
 };
 
-const getPRTimestamp = (prNumber: number) => {
-  return 1000 - prNumber;
+const getPRTimestamp = (pr: PullRequest) => {
+  const time = Date.parse(pr.createdAt);
+  return Number.isNaN(time) ? 0 : time;
 };
 
-export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pullRequests, onSelectPR }) => {
+/* Branch merge path: source → base, shown as text + icons in one cell */
+const BranchCell: React.FC<{ source: string; target: string }> = ({ source, target }) => {
+  if (!source && !target) {
+    return <span className="text-zinc-600">—</span>;
+  }
+  return (
+    <div className="flex items-center gap-1.5 min-w-0 font-mono text-xs" title={`${source || '?'} → ${target || '?'}`}>
+      <GitBranch className="w-3 h-3 text-zinc-500 shrink-0" />
+      <span className="text-zinc-300 truncate max-w-[90px]">{source || '?'}</span>
+      <GitMerge className="w-3 h-3 text-zinc-500 shrink-0" />
+      <ArrowRight className="w-3 h-3 text-zinc-500 shrink-0 -ml-1" />
+      <span className="text-zinc-400 truncate max-w-[80px]">{target || '?'}</span>
+    </div>
+  );
+};
+
+const PullRequestTableSkeletonRow: React.FC = () => (
+  <div className="grid grid-cols-[85px_56px_minmax(0,1fr)_180px_170px_150px_90px] items-center gap-4 px-4 py-3 bg-[#13151f]">
+    {/* Column 1: Date */}
+    <div className="flex flex-col gap-1.5">
+      <div className="h-3 w-12 rounded skeleton-glare" />
+      <div className="h-2 w-14 rounded skeleton-glare opacity-70" />
+    </div>
+
+    {/* Column 2: ID */}
+    <div className="h-3.5 w-8 rounded skeleton-glare" />
+
+    {/* Column 3: Title */}
+    <div className="h-3.5 rounded w-3/4 max-w-md skeleton-glare" />
+
+    {/* Column 4: Repo */}
+    <div className="flex items-center gap-1.5">
+      <div className="w-3.5 h-3.5 rounded shrink-0 skeleton-glare" />
+      <div className="h-3 w-28 rounded skeleton-glare" />
+    </div>
+
+    {/* Column 5: Branch */}
+    <div className="flex items-center gap-1.5">
+      <div className="w-3 h-3 rounded shrink-0 skeleton-glare" />
+      <div className="h-3 w-12 rounded skeleton-glare opacity-80" />
+      <div className="w-3 h-3 rounded shrink-0 skeleton-glare" />
+      <div className="h-3 w-12 rounded skeleton-glare opacity-80" />
+    </div>
+
+    {/* Column 6: Status */}
+    <div className="h-5 w-20 rounded-full skeleton-glare" />
+
+    {/* Column 7: Action button */}
+    <div className="flex justify-end">
+      <div className="h-6 w-16 rounded-lg skeleton-glare" />
+    </div>
+  </div>
+);
+
+const PullRequestCardSkeletonRow: React.FC = () => (
+  <div className="p-5 grid grid-cols-1 md:grid-cols-[1fr_170px_100px] items-center gap-4 bg-[#13151f]/50">
+    <div className="space-y-2 min-w-0">
+      <div className="flex items-center gap-2.5">
+        <div className="h-3.5 w-8 rounded skeleton-glare" />
+        <div className="h-4 w-3/4 max-w-md rounded skeleton-glare" />
+      </div>
+      <div className="flex items-center gap-3">
+        <div className="h-3 w-24 rounded skeleton-glare" />
+        <div className="h-3 w-28 rounded skeleton-glare opacity-80" />
+        <div className="h-3 w-16 rounded skeleton-glare opacity-60" />
+      </div>
+    </div>
+    <div className="h-5 w-20 rounded-full skeleton-glare" />
+    <div className="flex justify-end">
+      <div className="h-7 w-20 rounded-lg skeleton-glare" />
+    </div>
+  </div>
+);
+
+export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({
+  pullRequests,
+  onSelectPR,
+  initialStatusFilter = 'all',
+  onStatusFilterChange,
+}) => {
+  const [apiPullRequests, setApiPullRequests] = useState<PullRequest[] | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [activeUserId, setActiveUserId] = useState<string>(() => getAuthUserId());
+  const [userIdInput, setUserIdInput] = useState<string>(() => getAuthUserId());
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatusFilter);
+
+  useEffect(() => {
+    if (initialStatusFilter) {
+      setStatusFilter(initialStatusFilter);
+    }
+  }, [initialStatusFilter]);
+
+  const updateStatusFilter = (newStatus: string) => {
+    setStatusFilter(newStatus);
+    onStatusFilterChange?.(newStatus);
+  };
   const [selectedRepos, setSelectedRepos] = useState<string[]>([]);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
@@ -82,13 +218,74 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const uniqueRepos = Array.from(new Set(pullRequests.map(pr => pr.repoFullName)));
+  const [knownRepos, setKnownRepos] = useState<string[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    setIsLoading(true);
+
+    const debounceTimer = setTimeout(() => {
+      fetchPullRequestList({
+        userId: activeUserId,
+        search: searchQuery,
+        reviewStatus: statusFilter,
+        repo: selectedRepos,
+        order: sortDirection,
+      })
+        .then((prs) => {
+          if (cancelled) return;
+          setApiPullRequests(prs);
+          setFetchError(null);
+          setKnownRepos((prev) => {
+            const current = prs.map((pr) => pr.repoFullName);
+            return Array.from(new Set([...prev, ...current]));
+          });
+        })
+        .catch((err: Error) => {
+          if (cancelled) return;
+          setFetchError(err.message || 'Failed to load pull requests.');
+        })
+        .finally(() => {
+          if (!cancelled) setIsLoading(false);
+        });
+    }, 200);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(debounceTimer);
+    };
+  }, [activeUserId, searchQuery, statusFilter, selectedRepos, sortDirection]);
+
+  const handleSaveUserId = () => {
+    const trimmed = userIdInput.trim();
+    localStorage.setItem('gobe-user-id', trimmed);
+    setActiveUserId(trimmed);
+    // Notify other views (e.g. App-level PR fetching) in the same tab,
+    // since storage events only fire across tabs
+    window.dispatchEvent(new Event('gobe-user-id-changed'));
+  };
+
+  // Prefer live API data; fall back to the data passed via props when the API is unavailable
+  const allPullRequests =
+    apiPullRequests && apiPullRequests.length > 0 ? apiPullRequests : pullRequests;
+
+  const uniqueRepos = Array.from(
+    new Set([
+      ...knownRepos,
+      ...allPullRequests.map((pr) => pr.repoFullName),
+      ...pullRequests.map((pr) => pr.repoFullName),
+    ])
+  );
 
   const statusOptions = [
     { value: 'all', label: 'All Statuses' },
-    { value: 'changes_requested', label: 'Changes Requested' },
+    { value: 'completed', label: 'Completed' },
+    { value: 'in_progress', label: 'In Progress' },
+    { value: 'pending', label: 'Pending' },
     { value: 'approved', label: 'Approved' },
-    { value: 'in_progress', label: 'In Progress' }
+    { value: 'changes_requested', label: 'Changes Requested' },
+    { value: 'failed', label: 'Failed' },
   ];
 
   const handleToggleRepo = (repoName: string) => {
@@ -111,8 +308,9 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
     };
   }, []);
 
-  const filteredPRs = pullRequests.filter((pr) => {
+  const filteredPRs = allPullRequests.filter((pr) => {
     const matchesSearch =
+      !searchQuery ||
       pr.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pr.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       pr.author.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -127,8 +325,8 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
   });
 
   const sortedPRs = [...filteredPRs].sort((a, b) => {
-    const timeA = getPRTimestamp(a.number);
-    const timeB = getPRTimestamp(b.number);
+    const timeA = getPRTimestamp(a);
+    const timeB = getPRTimestamp(b);
     return sortDirection === 'asc' ? timeA - timeB : timeB - timeA;
   });
 
@@ -165,7 +363,7 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                 className={`p-1 rounded text-xs transition-colors cursor-pointer flex items-center justify-center ${
                   viewMode === 'table' ? 'bg-[#21262d] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
-                title="Clean Table View"
+                aria-label="Clean Table View"
               >
                 <Table className="w-3.5 h-3.5" />
               </button>
@@ -179,7 +377,7 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                 className={`p-1 rounded text-xs transition-colors cursor-pointer flex items-center justify-center ${
                   viewMode === 'cards' ? 'bg-[#21262d] text-zinc-100' : 'text-zinc-400 hover:text-zinc-200'
                 }`}
-                title="Expanded Cards View"
+                aria-label="Expanded Cards View"
               >
                 <LayoutList className="w-3.5 h-3.5" />
               </button>
@@ -199,7 +397,7 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                     ? 'text-[#c0f200] border-[#c0f200]/40 bg-[#c0f200]/5'
                     : 'text-zinc-300 border-[#2d303d]'
                 }`}
-                title="Filter by status & repository"
+                aria-label="Filter by status & repository"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
               </button>
@@ -211,7 +409,7 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    setStatusFilter('all');
+                    updateStatusFilter('all');
                     setSelectedRepos([]);
                     setRepoSearchQuery('');
                   }}
@@ -226,12 +424,12 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
             {showFilterDropdown && (
               <div className="absolute right-0 top-full mt-2 w-64 bg-[#161b22] border border-[#30363d] rounded-xl shadow-2xl p-4 z-50 animate-apple-fade space-y-4 text-left max-h-[350px] overflow-y-auto">
                 <div className="space-y-1.5">
-                  <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">Status</span>
+                  <span className="text-[9px] font-mono uppercase tracking-wider text-zinc-500 font-semibold block">Review Status</span>
                   <div className="space-y-1">
                     {statusOptions.map((opt) => (
                       <button
                         key={opt.value}
-                        onClick={() => setStatusFilter(opt.value)}
+                        onClick={() => updateStatusFilter(opt.value)}
                         className={`w-full flex items-center justify-between px-2.5 py-1 text-xs rounded transition-colors cursor-pointer ${
                           statusFilter === opt.value
                             ? 'bg-[#21262d] text-zinc-100 font-semibold'
@@ -291,24 +489,37 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
         </div>
       </div>
 
+      {/* API status banner */}
+      {fetchError && (
+        <div className="flex items-center gap-2 px-4 py-2 rounded-lg border border-amber-500/30 bg-amber-500/5 text-[11px] text-amber-300 font-sans">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          <span>
+            Showing cached data — couldn't load pull requests from server ({fetchError})
+          </span>
+        </div>
+      )}
+
       {/* Clean Table View */}
       {viewMode === 'table' ? (
         <div className="bg-[#13151f] border border-[#262b3a] rounded-xl overflow-hidden text-left">
           <div className="overflow-x-auto">
-            <div className="min-w-[960px]">
+            <div className="min-w-[1110px]">
               {/* Table Header (Keeps crisp dark header) */}
-              <div className="grid grid-cols-[85px_60px_1fr_210px_120px_150px_90px] items-center gap-4 px-4 py-2.5 bg-[#0e1017] border-b border-[#262b3a] text-[12px] font-sans font-medium text-zinc-400">
+              <div className="grid grid-cols-[85px_56px_minmax(0,1fr)_180px_170px_150px_90px] items-center gap-4 px-4 py-2.5 bg-[#0e1017] border-b border-[#262b3a] text-[12px] font-sans font-medium text-zinc-400">
                 {/* Column 1: Date */}
                 <button
                   onClick={() => setSortDirection(prev => prev === 'asc' ? 'desc' : 'asc')}
-                  className="flex items-center gap-1 hover:text-zinc-200 transition-colors cursor-pointer text-left focus:outline-none"
+                  title={sortDirection === 'desc' ? 'Sorted: Newest first (Click for Oldest)' : 'Sorted: Oldest first (Click for Newest)'}
+                  className="flex items-center gap-1.5 hover:text-zinc-100 transition-colors cursor-pointer text-left focus:outline-none group/sort"
                 >
-                  <span>Date</span>
-                  {sortDirection === 'desc' ? (
-                    <ArrowUpIcon className="w-3 h-3 text-zinc-500" />
-                  ) : (
-                    <ArrowDownIcon className="w-3 h-3 text-zinc-500" />
-                  )}
+                  <span className="font-medium text-zinc-300">Date</span>
+                  <span className="p-0.5 rounded group-hover/sort:bg-white/5 transition-colors">
+                    {sortDirection === 'desc' ? (
+                      <ArrowDownIcon className="w-3 h-3 text-[#c0f200]" />
+                    ) : (
+                      <ArrowUpIcon className="w-3 h-3 text-[#c0f200]" />
+                    )}
+                  </span>
                 </button>
 
                 {/* Column 2: ID */}
@@ -318,10 +529,10 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                 <div>Title</div>
 
                 {/* Column 4: Repo */}
-                <div className="pr-4">Repo</div>
+                <div className="pr-2">Repo</div>
 
-                {/* Column 5: Diff */}
-                <div className="pl-4">Diff</div>
+                {/* Column 5: Branch */}
+                <div>Branch</div>
 
                 {/* Column 6: Status (Left-aligned) */}
                 <div>Status</div>
@@ -332,30 +543,39 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
 
               {/* Table Body (Clean pleasant dark bg with subtle dividers and hover state) */}
               <div className="divide-y divide-[#1f2433]">
-                {sortedPRs.length === 0 ? (
+                {isLoading ? (
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <PullRequestTableSkeletonRow key={`table-skeleton-${i}`} />
+                  ))
+                ) : sortedPRs.length === 0 ? (
                   <div className="p-12 text-center text-zinc-500 text-sm">
                     No pull requests match the current filters.
                   </div>
                 ) : (
                   sortedPRs.map((pr) => {
-                    const dateTime = formatPRDateTime(pr.createdAt, pr.number);
+                    const dateTime = formatPRDateTime(pr.createdAt);
                     const statusObj = getStatusBadge(pr.status);
 
                     return (
                       <div
                         key={pr.id}
                         onClick={() => onSelectPR(pr)}
-                        className="grid grid-cols-[85px_60px_1fr_210px_120px_150px_90px] items-center gap-4 px-4 py-2.5 bg-[#13151f] hover:bg-[#1c212e] transition-colors cursor-pointer group"
+                        className="grid grid-cols-[85px_56px_minmax(0,1fr)_180px_170px_150px_90px] items-center gap-4 px-4 py-2.5 bg-[#13151f] hover:bg-[#1c212e] transition-colors cursor-pointer group"
                       >
-                        {/* Column 1: Date & Time Stacked */}
-                        <div className="flex flex-col justify-center leading-none">
+                        {/* Column 1: Date & Relative Time Stacked */}
+                        <div className="flex flex-col justify-center leading-none" title={dateTime.time ? `${dateTime.date} at ${dateTime.time}` : undefined}>
                           <span className="text-xs font-sans text-zinc-300 whitespace-nowrap">{dateTime.date}</span>
-                          <span className="text-[10px] font-mono text-zinc-500 mt-1 whitespace-nowrap">{dateTime.time}</span>
+                          <span className="text-[10px] font-mono text-zinc-500 mt-1 whitespace-nowrap">{dateTime.relative || dateTime.time}</span>
                         </div>
 
                         {/* Column 2: ID */}
-                        <div className="font-mono text-xs font-bold text-zinc-400 group-hover:text-zinc-200 transition-colors">
-                          #{pr.number}
+                        <div className="relative group/id min-w-0">
+                          <span className="block font-mono text-xs font-bold text-zinc-400 group-hover:text-zinc-200 transition-colors truncate">
+                            #{String(pr.number).slice(0, 3)}..
+                          </span>
+                          <div className="opacity-0 group-hover/id:opacity-100 transition-opacity pointer-events-none absolute -top-8 left-1/2 -translate-x-1/2 bg-[#1c202e] text-zinc-200 text-[10px] px-2 py-0.5 rounded shadow-lg whitespace-nowrap border border-[#303648] z-30 font-sans">
+                            #{pr.number}
+                          </div>
                         </div>
 
                         {/* Column 3: Title */}
@@ -366,17 +586,16 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                         </div>
 
                         {/* Column 4: Repo */}
-                        <div className="min-w-0 flex items-center gap-1.5 text-zinc-300 pr-4">
+                        <div className="min-w-0 flex items-center gap-1.5 text-zinc-300 pr-2">
                           <FolderGit2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                           <span className="text-xs font-mono truncate" title={pr.repoFullName}>
                             {pr.repoFullName}
                           </span>
                         </div>
 
-                        {/* Column 5: Diff */}
-                        <div className="flex items-center gap-2 font-mono text-xs pl-4">
-                          <span className="text-emerald-400 font-semibold">+{pr.additions}</span>
-                          <span className="text-rose-400 font-semibold">-{pr.deletions}</span>
+                        {/* Column 5: Branch (source → base) */}
+                        <div className="min-w-0 pr-2">
+                          <BranchCell source={pr.sourceBranch} target={pr.targetBranch} />
                         </div>
 
                         {/* Column 6: Status (Left-aligned) */}
@@ -412,20 +631,24 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
         /* Cards View */
         <Card>
           <div className="divide-y divide-[#282a36]">
-            {sortedPRs.length === 0 ? (
+            {isLoading ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <PullRequestCardSkeletonRow key={`card-skeleton-${i}`} />
+              ))
+            ) : sortedPRs.length === 0 ? (
               <div className="p-12 text-center text-zinc-500 text-sm">
                 No pull requests match the current filters.
               </div>
             ) : (
               sortedPRs.map((pr) => {
-                const dateTime = formatPRDateTime(pr.createdAt, pr.number);
+                const dateTime = formatPRDateTime(pr.createdAt);
                 const statusObj = getStatusBadge(pr.status);
 
                 return (
                   <div
                     key={pr.id}
                     onClick={() => onSelectPR(pr)}
-                    className="p-5 grid grid-cols-1 md:grid-cols-[1fr_170px_100px_100px] items-center gap-4 hover:bg-[#16171d] cursor-pointer transition-colors group"
+                    className="p-5 grid grid-cols-1 md:grid-cols-[1fr_170px_100px] items-center gap-4 hover:bg-[#16171d] cursor-pointer transition-colors group"
                   >
                     {/* Col 1: ID, Title & Metadata */}
                     <div className="space-y-1.5 min-w-0">
@@ -441,8 +664,16 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                           <FolderGit2 className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
                           <span>{pr.repoFullName}</span>
                         </div>
+                        {(pr.sourceBranch || pr.targetBranch) && (
+                          <>
+                            <span>•</span>
+                            <BranchCell source={pr.sourceBranch} target={pr.targetBranch} />
+                          </>
+                        )}
                         <span>•</span>
-                        <span className="text-zinc-500">{dateTime.date} {dateTime.time}</span>
+                        <span className="text-zinc-500" title={dateTime.time ? `${dateTime.date} at ${dateTime.time}` : undefined}>
+                          {dateTime.date} {dateTime.relative ? `• ${dateTime.relative}` : dateTime.time}
+                        </span>
                       </div>
                     </div>
 
@@ -454,13 +685,7 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
                       </span>
                     </div>
 
-                    {/* Col 3: Diff */}
-                    <div className="flex items-center gap-2 font-mono text-xs">
-                      <span className="text-emerald-400 font-semibold">+{pr.additions}</span>
-                      <span className="text-rose-400 font-semibold">-{pr.deletions}</span>
-                    </div>
-
-                    {/* Col 4: Review Button */}
+                    {/* Col 3: Review Button */}
                     <div className="flex justify-end">
                       <button
                         onClick={(e) => {
@@ -480,6 +705,31 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({ pull
           </div>
         </Card>
       )}
+
+      {/* Temporary User ID switcher (dev helper) */}
+      <div className="fixed bottom-4 right-4 z-50 flex items-center gap-2 bg-[#16171d]/95 border border-[#2d303d] rounded-lg pl-3 pr-1.5 py-1.5 shadow-xl backdrop-blur">
+        <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 whitespace-nowrap">
+          Temp User ID
+        </span>
+        <input
+          type="text"
+          placeholder="user uuid..."
+          value={userIdInput}
+          onChange={(e) => setUserIdInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSaveUserId();
+          }}
+          className="w-52 bg-[#0d1117] border border-[#30363d] text-zinc-300 text-[11px] font-mono rounded-md px-2 py-1 focus:outline-none focus:border-[#c0f200]/60 placeholder:text-zinc-600"
+        />
+        <button
+          onClick={handleSaveUserId}
+          disabled={!userIdInput.trim() || userIdInput.trim() === activeUserId}
+          className="px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#c0f200] text-black hover:bg-[#d4ff33] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer whitespace-nowrap"
+          title="Save & reload pull requests"
+        >
+          Apply
+        </button>
+      </div>
     </div>
   );
 };

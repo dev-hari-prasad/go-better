@@ -1,0 +1,1 @@
+ALTER TABLE "review" DROP CONSTRAINT "completed_review_requires_commit_sha";

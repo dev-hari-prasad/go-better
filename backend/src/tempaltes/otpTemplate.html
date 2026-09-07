@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en" style="height: 100%;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="{{colorScheme}}">
+  <meta name="supported-color-schemes" content="{{colorScheme}}">
+  <title>Verify your email address</title>
+
+  <!-- Google Fonts: Manrope (sans-serif) & JetBrains Mono (monospace) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@600;700&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+
+  <style type="text/css">
+    /* Base resets */
+    html, body {
+      height: 100% !important;
+      min-height: 100% !important;
+      margin: 0;
+      padding: 0;
+    }
+
+    body, table, td, p, h1, div, span, a {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      box-sizing: border-box;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    body {
+      width: 100% !important;
+      background-color: #fafafa;
+      font-family: 'Manrope', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+      mso-table-lspace: 0pt;
+      mso-table-rspace: 0pt;
+    }
+
+    .otp-code {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', monospace !important;
+    }
+
+    /* Dark Mode Styling */
+    @media (prefers-color-scheme: dark) {
+      body, .email-bg {
+        background-color: #0a0a0c !important;
+      }
+      .email-card {
+        background-color: #111217 !important;
+        border: 1px dashed #2e313d !important;
+        box-shadow: none !important;
+      }
+      .email-title {
+        color: #f4f4f5 !important;
+      }
+      .email-desc {
+        color: #a1a1aa !important;
+      }
+      .email-desc strong {
+        color: #f4f4f5 !important;
+      }
+      .otp-box {
+        background-color: #181920 !important;
+        border-color: #2a2c38 !important;
+      }
+      .otp-code {
+        color: #ffffff !important;
+      }
+      .otp-badge-text {
+        color: #8b8f9e !important;
+      }
+      .security-text {
+        color: #71717a !important;
+      }
+      .user-email-highlight {
+        color: #e4e4e7 !important;
+      }
+      .email-divider {
+        border-top-color: #232530 !important;
+      }
+      .footer-brand {
+        color: #71717a !important;
+      }
+      .footer-text {
+        color: #52525b !important;
+      }
+    }
+
+    /* Responsive Mobile Rules */
+    @media only screen and (max-width: 540px) {
+      .email-card-wrapper {
+        padding: 24px 12px !important;
+      }
+      .email-card {
+        padding: 32px 20px !important;
+      }
+      .otp-box {
+        padding: 16px 14px !important;
+        max-width: 100% !important;
+      }
+      .otp-code {
+        font-size: 28px !important;
+        letter-spacing: 6px !important;
+      }
+    }
+  </style>
+</head>
+
+<body class="email-bg" style="margin: 0; padding: 0; height: 100%; min-height: 100%; background-color: {{bodyBg}}; color: {{titleColor}}; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <!-- Preheader preview text (hidden from view, visible in inbox snippet) -->
+  <div style="display: none; max-height: 0px; overflow: hidden; font-size: 1px; line-height: 1px; color: #ffffff; opacity: 0;">
+    Your verification code is {{otp}}.
+  </div>
+
+  <!-- Outer wrapper table centered horizontally and vertically -->
+  <table role="presentation" class="email-bg" style="width: 100%; height: 100%; min-height: 100vh; border-collapse: collapse; border-spacing: 0; background-color: {{bodyBg}}; margin: 0; padding: 0;">
+    <tbody>
+      <tr>
+        <td class="email-card-wrapper" style="text-align: center; vertical-align: middle; padding: 40px 16px;">
+          
+          <!-- Main Card Container (Centered, No Box Shadow, No Border Radius, Thin Light Dashed Border) -->
+          <table role="presentation" class="email-card" style="max-width: 460px; width: 100%; margin: 0 auto; border-collapse: collapse; border-spacing: 0; background-color: {{cardBg}}; border: {{cardBorder}}; border-radius: 0; box-shadow: none;">
+            <tbody>
+              <tr>
+                <td style="padding: 40px 36px 36px 36px;">
+                  
+                  <!-- Brand Logo -->
+                  <div style="text-align: center; padding-bottom: 26px;">
+                    <a href="{{brandUrl}}" target="_blank" style="text-decoration: none; display: inline-block;">
+                      <img src="{{logoUrl}}" alt="{{brandName}}" width="52" height="52" style="display: block; width: 52px; height: 52px; max-width: 52px; border: 0; outline: none; text-decoration: none; margin: 0 auto;" />
+                    </a>
+                  </div>
+
+                  <!-- Heading -->
+                  <h1 class="email-title" style="margin: 0 0 10px 0; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 22px; font-weight: 700; line-height: 28px; text-align: center; color: {{titleColor}}; letter-spacing: -0.4px;">
+                    Verify your email address
+                  </h1>
+
+                  <!-- Description -->
+                  <p class="email-desc" style="margin: 0 0 28px 0; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 22px; text-align: center; color: {{descColor}};">
+                    Enter the verification code below to confirm your identity and sign in to <strong style="font-weight: 600; color: {{strongColor}};">{{brandName}}</strong>.
+                  </p>
+
+                  <!-- Vercel-Style OTP Code Display Box -->
+                  <div style="text-align: center; margin-bottom: 28px;">
+                    <table role="presentation" style="margin: 0 auto; border-collapse: collapse; border-spacing: 0;">
+                      <tbody>
+                        <tr>
+                          <td class="otp-box" style="background-color: {{otpBoxBg}}; border: {{otpBoxBorder}}; border-radius: 8px; padding: 18px 32px; text-align: center;">
+                            <div class="otp-code" style="font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 34px; font-weight: 700; letter-spacing: 8px; color: {{otpCodeColor}}; line-height: 1; padding-left: 8px;">
+                              {{otp}}
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <!-- Security notice -->
+                  <p class="security-text" style="margin: 0 0 30px 0; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 13px; line-height: 20px; text-align: center; color: {{securityColor}};">
+                    This code was requested for <span class="user-email-highlight" style="color: {{highlightColor}}; font-weight: 500;">{{email}}</span>. If you didn't make this request, you can safely ignore this email.
+                  </p>
+
+                  <!-- Subtle Divider Line -->
+                  <hr class="email-divider" style="border: 0; border-top: {{dividerBorder}}; margin: 0 0 24px 0; height: 1px;">
+
+                  <!-- Minimal Footer (Support line removed as requested) -->
+                  <div style="text-align: center; font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                    <p class="footer-brand" style="margin: 0 0 6px 0; font-size: 12px; font-weight: 600; color: {{footerBrandColor}}; letter-spacing: 0.2px;">
+                      {{brandName}} &#8226; {{brandTagline}}
+                    </p>
+                    <p class="footer-text" style="margin: 0; font-size: 11px; line-height: 16px; color: {{footerTextColor}};">
+                      &#169; {{copyrightYear}} {{brandName}}. All rights reserved.
+                    </p>
+                  </div>
+
+                </td>
+              </tr>
+            </tbody>
+          </table>
+
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>

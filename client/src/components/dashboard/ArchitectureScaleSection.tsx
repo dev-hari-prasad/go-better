@@ -16,7 +16,7 @@ export const ArchitectureScaleSection: React.FC = () => {
           {/* Top Heading Content */}
           <div className="relative z-20">
             {/* Prominent Heading Chip Tag with gap below */}
-            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm md:text-base font-bold font-mono border border-[#c0f200]/35 bg-[#c0f200]/12 text-[#c0f200] shadow-[0_0_20px_rgba(192,242,0,0.15)] mb-3.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm md:text-base font-medium font-mono border border-[#c0f200]/35 bg-[#c0f200]/12 text-[#c0f200] shadow-[0_0_20px_rgba(192,242,0,0.15)] mb-3.5">
               <GlobeHemisphereWest size={16} weight="duotone" />
               <span>Run AI review at massive scale</span>
             </div>
@@ -58,8 +58,8 @@ export const ArchitectureScaleSection: React.FC = () => {
           <div className="space-y-3">
             <Queue size={34} weight="duotone" color="#c0f200" />
             <h3
-              className="text-xl font-bold text-white tracking-tight"
-              style={{ fontFamily: "'Manrope', sans-serif" }}
+              className="text-xl font-medium text-white tracking-tight"
+              style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, letterSpacing: '-0.02em' }}
             >
               Queue-based architecture
             </h3>
@@ -75,8 +75,8 @@ export const ArchitectureScaleSection: React.FC = () => {
             {/* Item 2: Built-in observability */}
             <Gauge size={34} weight="duotone" color="#c0f200" />
             <h3
-              className="text-xl font-bold text-white tracking-tight"
-              style={{ fontFamily: "'Manrope', sans-serif" }}
+              className="text-xl font-medium text-white tracking-tight"
+              style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, letterSpacing: '-0.02em' }}
             >
               Built-in observability
             </h3>

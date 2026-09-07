@@ -1,0 +1,1 @@
+ALTER TABLE "aiMessages" DROP COLUMN "total_tokens";

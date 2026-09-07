@@ -1,0 +1,113 @@
+import { NextFunction, Request, Response } from "express";
+import { API_RESPONSE_MESSAGES } from "../constants/apiResponse.ts";
+import redis from "../lib/redis/redisClient.ts";
+import { REDIS_KEYS } from "../lib/redis/redisKeys.ts";
+import { db } from "../database/dbClient.ts";
+import { session } from "../database/schema/index.ts";
+import { eq } from "drizzle-orm";
+
+declare global {
+    namespace Express {
+        interface Request {
+            userId?: string;
+        }
+    }
+}
+
+async function authMiddleware
+    (req: Request, res: Response, next: NextFunction) {
+    try {
+    // Extract cookie from the request 
+    const sessionId = req.cookies.sessionId
+
+    if(!sessionId) {
+        return res.status(401).json({
+            error: API_RESPONSE_MESSAGES[401]
+        })
+    }
+
+    if(sessionId) {
+
+        let sessionInfo: { userId: string } | null = null;
+
+        // Get session from Redis
+        const sessionInfoFromRedis = await redis.get(REDIS_KEYS.session(sessionId))
+        if (sessionInfoFromRedis !== null) {
+            const cachedSessionInfo = JSON.parse(sessionInfoFromRedis) as { userId: string }[];
+            const cachedUserId = cachedSessionInfo[0]?.userId;
+            if (!cachedUserId) {
+                return res.status(401).json({
+                    error: API_RESPONSE_MESSAGES[401]
+                })
+            }
+            sessionInfo = { userId: cachedUserId };
+            req.userId = cachedUserId;
+        }
+    
+        //Make db call if session info unavilable in redis
+        if(sessionInfo == null) {
+            const sessionInfoFromDb = await db.select({
+                id: session.id,
+                userId: session.userId,
+                expiresAt: session.expiresAt
+            })
+            .from(session)
+            .where(eq(
+                session.id, sessionId
+            ))
+
+            // Return unautrozied incase session is not in the database or has expired
+            if (sessionInfoFromDb.length === 0) {
+                return res.status(401).json({
+                    error: API_RESPONSE_MESSAGES[401]
+                })
+            }
+
+            if (
+                sessionInfoFromDb[0]?.expiresAt !== null &&
+                sessionInfoFromDb[0]?.expiresAt !== undefined &&
+                sessionInfoFromDb[0].expiresAt <= new Date()
+            ) {
+                await db.delete(session)
+                    .where(eq(session.id, sessionId))
+
+                return res.clearCookie('session').status(401).json({
+                    error: API_RESPONSE_MESSAGES[401]
+                })
+            } 
+            
+            // Handle session is valid 
+            else if (
+                sessionInfoFromDb.length !== 0 &&
+                (sessionInfoFromDb[0]?.expiresAt === null ||
+                    sessionInfoFromDb[0]?.expiresAt === undefined ||
+                    sessionInfoFromDb[0]!.expiresAt > new Date())
+            ) {
+                // Insert session to Redis
+                const sessionInfoFromDbString = JSON.stringify(sessionInfoFromDb)
+                await redis.set(
+                    REDIS_KEYS.session(sessionInfoFromDb[0]!.id),
+                    sessionInfoFromDbString,
+                    'EX',
+                    30 * 24 * 60 * 60
+                )
+                sessionInfo = sessionInfoFromDb[0]!;
+
+                req.userId = sessionInfoFromDb[0]!.userId;
+            }
+        }
+
+    }
+
+    // Allow next
+    next()
+
+    } catch (error) {
+        return res.status(500).json({
+            error: API_RESPONSE_MESSAGES[500]
+        })
+    }
+
+}
+
+export default authMiddleware

@@ -1,0 +1,393 @@
+/* GoBetter Custom Brand Styling for Mintlify */
+
+:root {
+  --primary: 192 242 0 !important;
+  --primary-light: 216 255 67 !important;
+  --primary-dark: 15 16 19 !important;
+  --brand-primary: #c0f200;
+  --brand-primary-light: #d8ff43;
+  --brand-primary-dark: #4d6300;
+  --bg-dark: #0f1013;
+  --sidebar-dark: #0f1013;
+  --card-dark: #16171d;
+  --border-dark: #232530;
+  /* Mintlify Tailwind RGB triplets */
+  --background-dark: 15 16 19 !important;
+  --background-light: 255 255 255 !important;
+}
+
+/* =========================================
+   DARK THEME (Default - Preserved Exactly)
+   ========================================= */
+html.dark,
+.dark body,
+html.dark #background-color,
+html.dark #content-container,
+html.dark main,
+html.dark #content-area,
+html.dark header#navbar,
+html.dark #navbar,
+html.dark #navbar-transition,
+html.dark [data-docs-theme],
+html.dark [data-docs-theme] > div,
+html.dark #sidebar,
+html.dark [data-sidebar],
+html.dark aside,
+html.dark #sidebar-content {
+  background-color: #0f1013 !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark #navbar-transition,
+html.dark header#navbar,
+html.dark #sidebar,
+html.dark [data-sidebar],
+html.dark aside {
+  border-color: var(--border-dark) !important;
+}
+
+html.dark a[aria-current="page"],
+html.dark .active-nav-item,
+html.dark [data-active="true"] > a {
+  color: #c0f200 !important;
+  background-color: transparent !important;
+  border-color: #c0f200 !important;
+  font-weight: 400 !important;
+  text-shadow: none !important;
+}
+
+html.dark a[aria-current="page"] *,
+html.dark .active-nav-item *,
+html.dark [data-active="true"] > a * {
+  font-weight: 400 !important;
+  text-shadow: none !important;
+}
+
+html.dark a[aria-current="page"] svg,
+html.dark .active-nav-item svg,
+html.dark [data-active="true"] > a svg {
+  background-color: #c0f200 !important;
+  color: #c0f200 !important;
+}
+
+html.dark .card,
+html.dark [class*="Card"] {
+  background-color: var(--card-dark) !important;
+  border: 1px solid var(--border-dark) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+html.dark .card:hover,
+html.dark [class*="Card"]:hover {
+  border-color: rgba(192, 242, 0, 0.5) !important;
+  box-shadow: 0 4px 20px -2px rgba(192, 242, 0, 0.08) !important;
+}
+
+html.dark .accordion,
+html.dark [data-component-part="accordion"] {
+  background-color: #131418 !important;
+  border-color: var(--border-dark) !important;
+}
+
+html.dark pre,
+html.dark code {
+  border-color: var(--border-dark) !important;
+}
+
+html.dark header#navbar {
+  background-color: #0f1013 !important;
+  border-bottom: 1px solid var(--border-dark) !important;
+}
+
+html.dark header#navbar button[class*="border"] {
+  background-color: #16171d !important;
+  border-color: var(--border-dark) !important;
+  color: #a1a1aa !important;
+  transition: all 0.2s ease !important;
+}
+
+html.dark header#navbar button[class*="border"]:hover {
+  border-color: rgba(192, 242, 0, 0.4) !important;
+  color: #f4f4f5 !important;
+}
+
+html.dark table th {
+  color: #f4f4f5 !important;
+  border-bottom: 1px solid var(--border-dark) !important;
+}
+
+html.dark table td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+html.dark table tr:hover td {
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* =========================================
+   LIGHT THEME (Clean, Crisp & Readable)
+   ========================================= */
+html:not(.dark),
+html:not(.dark) body,
+html:not(.dark) #background-color,
+html:not(.dark) #content-container,
+html:not(.dark) main,
+html:not(.dark) #content-area,
+html:not(.dark) header#navbar,
+html:not(.dark) #navbar,
+html:not(.dark) #navbar-transition,
+html:not(.dark) [data-docs-theme],
+html:not(.dark) [data-docs-theme] > div,
+html:not(.dark) #sidebar,
+html:not(.dark) [data-sidebar],
+html:not(.dark) aside,
+html:not(.dark) #sidebar-content {
+  background-color: #ffffff !important;
+  color: #18181b !important;
+}
+
+html:not(.dark) #navbar-transition,
+html:not(.dark) header#navbar,
+html:not(.dark) #sidebar,
+html:not(.dark) [data-sidebar],
+html:not(.dark) aside {
+  border-color: #e4e4e7 !important;
+}
+
+html:not(.dark) a[aria-current="page"],
+html:not(.dark) .active-nav-item,
+html:not(.dark) [data-active="true"] > a {
+  color: #4d6300 !important;
+  background-color: rgba(192, 242, 0, 0.12) !important;
+  border-color: #4d6300 !important;
+  font-weight: 600 !important;
+}
+
+html:not(.dark) a[aria-current="page"] svg,
+html:not(.dark) .active-nav-item svg,
+html:not(.dark) [data-active="true"] > a svg {
+  color: #4d6300 !important;
+}
+
+html:not(.dark) .card,
+html:not(.dark) [class*="Card"] {
+  background-color: #ffffff !important;
+  border: 1px solid #e4e4e7 !important;
+  color: #18181b !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+html:not(.dark) .card:hover,
+html:not(.dark) [class*="Card"]:hover {
+  border-color: rgba(77, 99, 0, 0.4) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+html:not(.dark) .accordion,
+html:not(.dark) [data-component-part="accordion"] {
+  background-color: #f8fafc !important;
+  border-color: #e4e4e7 !important;
+  color: #18181b !important;
+}
+
+html:not(.dark) header#navbar {
+  background-color: #ffffff !important;
+  border-bottom: 1px solid #e4e4e7 !important;
+}
+
+html:not(.dark) header#navbar button[class*="border"] {
+  background-color: #f4f4f5 !important;
+  border-color: #e4e4e7 !important;
+  color: #52525b !important;
+}
+
+html:not(.dark) header#navbar button[class*="border"]:hover {
+  border-color: #a1a1aa !important;
+  color: #18181b !important;
+}
+
+html:not(.dark) table th {
+  color: #18181b !important;
+  border-bottom: 1px solid #e4e4e7 !important;
+}
+
+html:not(.dark) table td {
+  border-bottom: 1px solid #f4f4f5 !important;
+}
+
+html:not(.dark) table tr:hover td {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+/* Light mode: ensure all text content is dark and readable */
+html:not(.dark) p,
+html:not(.dark) li,
+html:not(.dark) span,
+html:not(.dark) div,
+html:not(.dark) dd,
+html:not(.dark) dt {
+  color: #27272a !important;
+}
+
+html:not(.dark) h1,
+html:not(.dark) h2,
+html:not(.dark) h3,
+html:not(.dark) h4,
+html:not(.dark) h5,
+html:not(.dark) h6 {
+  color: #18181b !important;
+}
+
+html:not(.dark) a:not([class*="bg-primary"]) {
+  color: #4d6300 !important;
+}
+
+html:not(.dark) a:not([class*="bg-primary"]):hover {
+  color: #3d4f00 !important;
+}
+
+html:not(.dark) pre {
+  background-color: #f4f4f5 !important;
+  border: 1px solid #e4e4e7 !important;
+}
+
+html:not(.dark) :not(pre) > code {
+  background-color: #f4f4f5 !important;
+  color: #18181b !important;
+  border: 1px solid #e4e4e7 !important;
+}
+
+html:not(.dark) .card p,
+html:not(.dark) .card span,
+html:not(.dark) [class*="Card"] p,
+html:not(.dark) [class*="Card"] span {
+  color: #52525b !important;
+}
+
+html:not(.dark) .card h3,
+html:not(.dark) .card h4,
+html:not(.dark) [class*="Card"] h3,
+html:not(.dark) [class*="Card"] h4 {
+  color: #18181b !important;
+}
+
+html:not(.dark) .accordion p,
+html:not(.dark) [data-component-part="accordion"] p {
+  color: #3f3f46 !important;
+}
+
+/* Light mode sidebar text */
+html:not(.dark) #sidebar a,
+html:not(.dark) [data-sidebar] a,
+html:not(.dark) aside a {
+  color: #52525b !important;
+}
+
+html:not(.dark) #sidebar a:hover,
+html:not(.dark) [data-sidebar] a:hover,
+html:not(.dark) aside a:hover {
+  color: #4d6300 !important;
+}
+
+/* =========================================
+   COMMON BRAND STYLING
+   ========================================= */
+/* Top navbar Dashboard CTA button */
+header#navbar a[class*="bg-primary"],
+header#navbar a[class*="bg-primary-light"] {
+  background-color: var(--brand-primary) !important;
+  color: #0c0d12 !important;
+  font-weight: 600 !important;
+  border-radius: 6px !important;
+  padding: 0.35rem 0.85rem !important;
+  transition: all 0.2s ease !important;
+}
+
+header#navbar a[class*="bg-primary"]:hover,
+header#navbar a[class*="bg-primary-light"]:hover {
+  background-color: var(--brand-primary-light) !important;
+  color: #0c0d12 !important;
+  box-shadow: 0 0 14px rgba(192, 242, 0, 0.35) !important;
+  opacity: 1 !important;
+}
+
+/* Top navbar links */
+header#navbar a:not([class*="bg-primary"]):not([class*="shrink-0"]):hover {
+  color: var(--brand-primary) !important;
+}
+
+/* Top navbar theme toggle button */
+header#navbar .theme-preference-menu-trigger:hover svg {
+  color: var(--brand-primary) !important;
+}
+
+/* Logo sizing */
+.nav-logo,
+header img[src*="logo"],
+[data-logo] img,
+.logo-container img {
+  height: 1.85rem !important;
+  width: auto !important;
+  max-height: 32px !important;
+  transition: transform 0.2s ease, opacity 0.2s ease !important;
+  filter: none !important;
+}
+
+.nav-logo:hover,
+header img[src*="logo"]:hover,
+[data-logo]:hover img,
+.logo-container:hover img {
+  transform: scale(1.02) !important;
+  filter: none !important;
+}
+
+/* MCP Logo Theme Adaptation: White in dark mode, dark in light mode */
+html.dark img[src*="mcp"],
+.dark img[src*="mcp"] {
+  filter: brightness(0) invert(1) !important;
+}
+
+html:not(.dark) img[src*="mcp"] {
+  filter: brightness(0) !important;
+}
+
+/* Documentation container max-width enhancement for desktop */
+@media (min-width: 1024px) {
+  main div.max-w-xl {
+    max-width: 46rem !important;
+  }
+}
+
+/* Documentation table enhancements */
+table {
+  width: 100% !important;
+  border-collapse: collapse !important;
+  margin-top: 1.25rem !important;
+  margin-bottom: 1.75rem !important;
+}
+
+table th {
+  font-weight: 600 !important;
+  font-size: 0.85rem !important;
+  padding: 0.625rem 0.75rem !important;
+  text-align: left !important;
+  min-width: unset !important;
+  white-space: nowrap !important;
+}
+
+table td {
+  padding: 0.625rem 0.75rem !important;
+  vertical-align: top !important;
+  line-height: 1.45 !important;
+  font-size: 0.85rem !important;
+  min-width: unset !important;
+}
+
+table td code {
+  font-size: 0.8rem !important;
+  padding: 0.15rem 0.35rem !important;
+  border-radius: 4px !important;
+  white-space: nowrap !important;
+}
+

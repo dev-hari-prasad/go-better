@@ -1,15 +1,16 @@
 import { log } from "node:console";
 import { Job, Worker } from "bullmq";
-import { connection , sanitizedPrPayload, deadLetter } from '../config/queue.ts'
+import { connection , sanitizedPrPayload, deadLetter, workerOptions } from '../config/queue.ts'
 
 const worker = new Worker(
     "unprocessedWebhookPayload",
     async (job) => {
     
         const payload = job.data.body
+        const pullRequestDbId = job.data.pullRequestDbId
     
     try {
-
+        log('satnsiztion request recived')
         const cleanPayload = {
         action: payload.action,
         number: payload.number,
@@ -195,17 +196,20 @@ const worker = new Worker(
             login: payload.sender?.login,
             html_url: payload.sender?.html_url,
         },
+
+        additionalInfo: {
+            pullRequestDbID: pullRequestDbId
+        }
     };
-
         await sanitizedPrPayload.add('sanitizedPayload', cleanPayload)
-
+        log('sanization coemptled')
     }
 
     catch (error) {
             throw error;
         }
     }, 
-    { connection });
+    { connection, ...workerOptions, concurrency: 1 });
 
 
 // Remove job from 

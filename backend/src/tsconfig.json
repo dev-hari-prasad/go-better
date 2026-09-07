@@ -11,6 +11,7 @@
     "target": "esnext",
     // "types": [],
     "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
     "noEmit": true,
     // For nodejs:
     // "lib": ["esnext"],

@@ -1,0 +1,2 @@
+ALTER TABLE "review" DROP CONSTRAINT "completed_review_requires_commit_sha";--> statement-breakpoint
+ALTER TABLE "review" ADD CONSTRAINT "completed_review_requires_commit_sha" CHECK ("review"."status" <> 'completed' OR "review"."reviewed_commit_sha" IS NOT NULL);

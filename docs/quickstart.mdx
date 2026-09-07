@@ -1,0 +1,117 @@
+---
+title: 'Quickstart'
+icon: 'bolt'
+description: 'Get GoBetter up and running on your local machine in minutes'
+---
+
+Follow this guide to set up the GoBetter backend and frontend applications locally.
+
+## Prerequisites
+
+Ensure you have the following installed on your system:
+
+- [Node.js](https://nodejs.org/) (v20 or higher) or [Bun](https://bun.sh/)
+- [pnpm](https://pnpm.io/) package manager
+- [Docker](https://www.docker.com/) (recommended for PostgreSQL and Redis)
+- An AI provider API key (e.g. OpenAI, OpenRouter) or access to platform models
+
+---
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/dev-hari-prasad/go-better.git
+cd go-better
+```
+
+---
+
+## 2. Start Infrastructure (PostgreSQL & Redis)
+
+GoBetter uses PostgreSQL for primary data storage and Redis for BullMQ task queues and user sessions.
+
+<CodeGroup>
+```bash Docker
+# Start PostgreSQL (Port 5432) and Redis (Port 6379)
+docker run -d --name gobetter-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=gobetter_db -p 5432:5432 postgres:16
+docker run -d --name gobetter-redis -p 6379:6379 redis:7-alpine
+```
+
+```bash Local Service
+# If running natively
+brew services start postgresql@16
+brew services start redis
+```
+</CodeGroup>
+
+---
+
+## 3. Configure Environment Variables
+
+### Backend Configuration
+
+Create a `.env` file in the `backend/` directory:
+
+```bash backend/.env
+PORT=5000
+CLIENT_URL=http://localhost:3000
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gobetter_db
+REDIS_URL=redis://localhost:6379
+
+# AI Model Provider
+BASE_MODEL=openai/gpt-4o
+AI_API_KEY=your-openai-or-openrouter-key
+AI_BASE_URL=https://api.openai.com/v1
+OPEN_AI_INTERFACE=chat
+
+# Optional: Resend API for transactional auth emails
+RESEND_API_KEY=re_your_api_key
+```
+
+### Client Configuration
+
+Create a `.env` file in the `client/` directory:
+
+```bash client/.env
+VITE_API_BASE_URL=http://localhost:5000
+VITE_ENABLE_PUBLIC_REPOS=true
+```
+
+---
+
+## 4. Install Dependencies & Run Migrations
+
+Install dependencies in both directories and apply the database schema using Drizzle:
+
+```bash
+# Backend setup
+cd backend
+pnpm install
+pnpm run db:push    # or npx drizzle-kit push
+
+# Client setup
+cd ../client
+pnpm install
+```
+
+---
+
+## 5. Launch the Development Servers
+
+Start both services in development mode:
+
+<CodeGroup>
+```bash Terminal 1 (Backend)
+cd backend
+pnpm run dev
+# Server running at http://localhost:5000
+```
+
+```bash Terminal 2 (Client)
+cd client
+pnpm run dev
+# Web app running at http://localhost:3000
+```
+</CodeGroup>
+
+Open [http://localhost:3000](http://localhost:3000) in your browser to start reviewing pull requests with GoBetter.

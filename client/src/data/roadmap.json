@@ -1,0 +1,122 @@
+[
+  {
+    "key": "#101",
+    "title": "Real-time AI Chat & Token Streaming",
+    "description": "Stream LLM reasoning tokens live over HTTP with conversation history persistence in PostgreSQL.",
+    "status": "shipped",
+    "priority": "high",
+    "category": "AI Chat"
+  },
+  {
+    "key": "#102",
+    "title": "BullMQ & Redis Background Worker Pipeline",
+    "description": "Multi-stage asynchronous queue for payload sanitization, file extraction, and agentic PR reviews.",
+    "status": "shipped",
+    "priority": "high",
+    "category": "Workers"
+  },
+  {
+    "key": "#103",
+    "title": "GitHub Webhook Ingestion & Signature Verification",
+    "description": "Secure webhook receiver validating HMAC-SHA256 signatures and queueing pull request review jobs.",
+    "status": "shipped",
+    "priority": "high",
+    "category": "GitHub"
+  },
+  {
+    "key": "#104",
+    "title": "BYOK Key Management with Vercel AI & OpenAI Providers",
+    "description": "Secure API key storage supporting OpenAI, Vercel AI Gateway, and custom OpenAI-compatible endpoints.",
+    "status": "shipped",
+    "priority": "high",
+    "category": "BYOK"
+  },
+  {
+    "key": "#105",
+    "title": "Drizzle ORM & PostgreSQL Database Layer",
+    "description": "Type-safe database schemas for repositories, pull requests, AI conversations, and review history.",
+    "status": "shipped",
+    "priority": "medium",
+    "category": "Database"
+  },
+  {
+    "key": "#106",
+    "title": "PostgreSQL Database Indexes for Faster Reads",
+    "description": "Added composite and B-tree indexes across conversation IDs, user IDs, and timestamps for low-latency read queries.",
+    "status": "planned",
+    "priority": "high",
+    "category": "Database"
+  },
+  {
+    "key": "#107",
+    "title": "OpenAPI & Swagger Interactive Documentation",
+    "description": "Auto-generated Swagger UI docs for all backend endpoints, webhooks, and AI routes.",
+    "status": "planned",
+    "priority": "medium",
+    "category": "API"
+  },
+  {
+    "key": "#108",
+    "title": "Automated GitHub Inline Review Comments",
+    "description": "Post AI review comments and code suggestions directly onto GitHub pull request diffs.",
+    "status": "in-progress",
+    "priority": "high",
+    "category": "GitHub"
+  },
+  {
+    "key": "#109",
+    "title": "Worker Metrics & Queue Health Monitoring",
+    "description": "Track BullMQ job failure rates, queue latency, and review processing durations.",
+    "status": "in-progress",
+    "priority": "high",
+    "category": "Monitoring"
+  },
+  {
+    "key": "#110",
+    "title": "Multi-File Dependency Resolution in Reviews",
+    "description": "Analyze cross-file imports and shared types during agentic review passes.",
+    "status": "planned",
+    "priority": "medium",
+    "category": "AI Review"
+  },
+  {
+    "key": "#111",
+    "title": "Codebase Review Analytics & Velocity Metrics",
+    "description": "Aggregate PR turnaround times, common vulnerability frequencies, and review velocity trends.",
+    "status": "planned",
+    "priority": "medium",
+    "category": "Analytics"
+  },
+  {
+    "key": "#112",
+    "title": "Team Workspaces & Organization Role-Based Access",
+    "description": "Multi-user workspace management with granular member permissions, shared BYOK keys, and audit logs.",
+    "status": "planned",
+    "priority": "high",
+    "category": "Team"
+  },
+  {
+    "key": "#113",
+    "title": "Automated Secret Scanning & SAST Security Audits",
+    "description": "Static analysis pipeline checking for exposed API keys, OWASP top 10 vulnerabilities, and dependency CVEs.",
+    "status": "planned",
+    "priority": "high",
+    "category": "Security"
+  },
+  {
+    "key": "#114",
+    "title": "LLM Token Pricing & Model Cost Analytics (v2)",
+    "description": "Maintain model pricing registries across OpenAI, Anthropic, and Gemini to calculate and display per-request token usage costs and team budget tracking.",
+    "status": "planned",
+    "priority": "medium",
+    "category": "Analytics"
+  },
+  {
+    "key": "#115",
+    "title": "Integrated Analytics & Team Velocity Dashboard",
+    "description": "Comprehensive engineering analytics suite featuring review turnaround trends, PR throughput, token consumption graphs, and vulnerability breakdowns. Scheduled for a future release.",
+    "status": "planned",
+    "priority": "high",
+    "category": "Analytics"
+  }
+]

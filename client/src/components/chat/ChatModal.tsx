@@ -1,99 +1,236 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
   XMarkIcon, 
   ArrowsPointingOutIcon,
   MinusIcon,
-  Square2StackIcon,
-  PlusIcon,
-  ChevronDownIcon,
   LightBulbIcon,
   ShieldCheckIcon
 } from '@heroicons/react/24/outline';
 import { Bot, ArrowUp, ChevronDown, GitPullRequest, History, Plus } from 'lucide-react';
-import { AIChatMessage, ChatMessage } from './AIChatMessage';
-import { SparklesIcon } from '@heroicons/react/24/outline';
+import { GobeAiLogo } from '../ui/GobeAiLogo';
+import { AIChatMessage } from './AIChatMessage';
+import { useAiChat } from '../../hooks/useAiChat';
+import { ConversationListItem } from '../../services/aiChatApi';
+import { PullRequest } from '../../types/codeReview';
+import { PullRequestSummary } from '../../services/pullRequestApi';
+import { PrSummaryDropdown } from '../ui/PrSummaryDropdown';
+import { ModelPickerButton } from './ModelPickerButton';
+import { useModelPicker } from '../../hooks/useModelPicker';
+import { getChatGreeting } from '../../utils/greetings';
+import { ChatBottomLightBeam } from './ChatBottomLightBeam';
 
 interface ChatModalProps {
   isOpen: boolean;
+  pullRequests?: PullRequest[];
+  /** When provided, the modal opens bound to this existing conversation */
+  initialConversation?: ConversationListItem | null;
+  /** When provided, auto-attaches this PR to the chat */
+  initialPr?: PullRequestSummary | null;
   onClose: () => void;
   onMaximize?: () => void;
 }
 
-export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, onMaximize }) => {
+export const ChatModal: React.FC<ChatModalProps> = ({
+  isOpen,
+  pullRequests = [],
+  initialConversation = null,
+  initialPr = null,
+  onClose,
+  onMaximize,
+}) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
   const [input, setInput] = useState('');
-  const [showModelMenu, setShowModelMenu] = useState(false);
-  const [showPrMenu, setShowPrMenu] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
-  const [selectedPrChat, setSelectedPrChat] = useState<string | null>(null);
-  
-  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
-  const [isAiThinking, setIsAiThinking] = useState(false);
-  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [selectedPr, setSelectedPr] = useState<PullRequestSummary | null>(initialPr);
+  const [copiedSnippetId, setCopiedSnippetId] = useState<string | null>(null);
+
+  const [greeting, setGreeting] = useState<string>(() => getChatGreeting());
+  const [isLogoBlinking, setIsLogoBlinking] = useState(true);
+  const [logoBlinkKey, setLogoBlinkKey] = useState(0);
+  const logoBlinkTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const triggerLogoBlink = useCallback(() => {
+    if (logoBlinkTimerRef.current) {
+      clearTimeout(logoBlinkTimerRef.current);
+    }
+    setIsLogoBlinking(false);
+    requestAnimationFrame(() => {
+      setIsLogoBlinking(true);
+      setLogoBlinkKey((k) => k + 1);
+      logoBlinkTimerRef.current = setTimeout(() => {
+        setIsLogoBlinking(false);
+      }, 1900);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogoBlinking(true);
+      setLogoBlinkKey((k) => k + 1);
+      logoBlinkTimerRef.current = setTimeout(() => {
+        setIsLogoBlinking(false);
+      }, 1900);
+    }
+    return () => {
+      if (logoBlinkTimerRef.current) clearTimeout(logoBlinkTimerRef.current);
+    };
+  }, [isOpen]);
+
+  const {
+    messages: chatHistory,
+    isThinking,
+    isLoadingMessages,
+    error,
+    clearError,
+    activeConversation,
+    sendMessage,
+    sendFeedback,
+    resetChat,
+    selectConversation,
+    conversations,
+    isLoadingConversations,
+    isLoadingMoreConversations,
+    hasMoreConversations,
+    loadConversations,
+    loadMoreConversations,
+  } = useAiChat();
+
+  const { activeModel } = useModelPicker();
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const latestUserMessageRef = useRef<HTMLDivElement>(null);
+  const lastScrolledUserMsgIdRef = useRef<string | null>(null);
+
+  // When a user message is sent, smoothly align it near the top
+  useEffect(() => {
+    const userMessages = chatHistory.filter((m) => m.sender === 'user');
+    const latestUserMsg = userMessages[userMessages.length - 1];
+
+    if (latestUserMsg && latestUserMsg.id !== lastScrolledUserMsgIdRef.current) {
+      lastScrolledUserMsgIdRef.current = latestUserMsg.id;
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current && latestUserMessageRef.current) {
+          const container = scrollContainerRef.current;
+          const target = latestUserMessageRef.current;
+          const containerRect = container.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const relativeTop = targetRect.top - containerRect.top + container.scrollTop;
+
+          container.scrollTo({
+            top: Math.max(0, relativeTop - 16),
+            behavior: 'smooth',
+          });
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [chatHistory]);
+
+  // Fetch conversation history whenever the popover opens
+  useEffect(() => {
+    if (showHistory) {
+      void loadConversations();
+    }
+  }, [showHistory, loadConversations]);
+
+  // Bind to the requested conversation (or start fresh) each time the modal opens
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (isOpen && !wasOpenRef.current) {
+      if (initialConversation) {
+        selectConversation(initialConversation);
+      } else {
+        resetChat();
+      }
+      if (initialPr) {
+        setSelectedPr(initialPr);
+      }
+    }
+    wasOpenRef.current = isOpen;
+  }, [isOpen, initialConversation, initialPr, selectConversation, resetChat]);
+
+  // Also listen for runtime open-gobe-chat events
+  useEffect(() => {
+    const handleOpenGobeChat = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        pr?: PullRequestSummary;
+        prId?: string | number;
+        prTitle?: string;
+      }>;
+      const pr = customEvent.detail?.pr || (customEvent.detail?.prId ? {
+        id: String(customEvent.detail.prId),
+        prId: customEvent.detail.prId,
+        title: customEvent.detail.prTitle || `PR #${customEvent.detail.prId}`,
+      } : null);
+      if (pr) {
+        setSelectedPr(pr);
+      }
+    };
+    window.addEventListener('open-gobe-chat', handleOpenGobeChat);
+    return () => window.removeEventListener('open-gobe-chat', handleOpenGobeChat);
+  }, []);
 
   const handleClose = () => {
     setIsClosing(true);
     setTimeout(() => {
       onClose();
-    }, 300);
+    }, 200);
   };
 
   const handleMaximize = () => {
+    if (activeConversation) {
+      window.dispatchEvent(
+        new CustomEvent('select-ai-chat-conversation', { detail: { conversation: activeConversation } })
+      );
+    }
+    if (input.trim() || selectedPr) {
+      const payload = {
+        message: input,
+        prId: selectedPr ? String(selectedPr.prId || selectedPr.id) : undefined,
+        prTitle: selectedPr?.title,
+      };
+      sessionStorage.setItem('gobe-pending-chat', JSON.stringify(payload));
+      window.dispatchEvent(new CustomEvent('start-ai-chat', { detail: payload }));
+    }
+
     setIsClosing(true);
     setTimeout(() => {
       onMaximize?.();
-    }, 300);
+    }, 150);
   };
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleCopySnippet = (id: string, code: string) => {
     navigator.clipboard.writeText(code);
-    setCopiedCodeId(id);
-    setTimeout(() => setCopiedCodeId(null), 2000);
+    setCopiedSnippetId(id);
+    setTimeout(() => setCopiedSnippetId(null), 2000);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!input.trim()) return;
-    
+
     const queryText = input;
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      text: queryText,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      prContext: selectedPrChat || undefined
-    };
-
-    setChatHistory(prev => [...prev, userMsg]);
     setInput('');
-    setIsAiThinking(true);
 
-    const streamingId = `ai-${Date.now()}`;
-    setChatHistory((prev) => [...prev, {
-      id: streamingId,
-      sender: 'ai',
-      text: 'Analyzing repository context...',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      isStreaming: true,
-      title: 'Streaming Text'
-    }]);
+    const customModelData = activeModel ? {
+      id: activeModel.id,
+      name: activeModel.name,
+      providerId: activeModel.providerId,
+      providerLabel: activeModel.providerLabel,
+      baseURL: activeModel.baseURL,
+      isCustom: Boolean(activeModel.isCustom || activeModel.providerId === 'custom'),
+    } : undefined;
 
-    setTimeout(() => {
-      setIsAiThinking(false);
-      setChatHistory((prev) => prev.map(m => m.id === streamingId ? {
-        ...m,
-        text: `Regarding your query about "${queryText}": I analyzed the repository structure and active branches. The AST type checking verifies 100% compliance with strict null checks.`,
-        isStreaming: false,
-        title: 'Analysis Complete',
-        codeSnippet: queryText.toLowerCase().includes('code') || queryText.toLowerCase().includes('fix')
-          ? `// Automated Code Recommendation\nexport function verifyToken(a: string, b: string): boolean {\n  return a === b;\n}`
-          : undefined,
-        sources: [{ id: '1', name: 'src/utils.ts' }],
-        followUps: ['Generate tests for this', 'Check for memory leaks']
-      } : m));
-    }, 1200);
+    await sendMessage({
+      text: queryText,
+      llmModel: activeModel?.id,
+      modelName: activeModel?.name,
+      customModel: Boolean(activeModel?.isCustom || activeModel?.providerId === 'custom'),
+      customModelData,
+      ...(selectedPr ? { prId: String(selectedPr.prId || selectedPr.id), prTitle: selectedPr.title } : {}),
+    });
   };
 
   useEffect(() => {
@@ -105,33 +242,48 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, onMaximiz
       const timer = setTimeout(() => {
         setShouldRender(false);
         setIsClosing(false);
-      }, 300);
+      }, 200);
       return () => clearTimeout(timer);
     }
   }, [isOpen, shouldRender]);
 
   useEffect(() => {
+    const handleFocus = () => {
+      textareaRef.current?.focus();
+    };
+    window.addEventListener('focus-chat-input', handleFocus);
+    return () => window.removeEventListener('focus-chat-input', handleFocus);
+  }, []);
+
+  useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+      textareaRef.current.style.height = `${Math.max(44, Math.min(textareaRef.current.scrollHeight, 160))}px`;
     }
   }, [input]);
 
   if (!shouldRender) return null;
 
   return (
-    <div className={`fixed inset-0 z-50 flex items-start justify-end p-4 pt-16 ${isClosing ? 'opacity-0 transition-opacity duration-300' : ''}`} onClick={onClose}>
+    <div 
+      className={`fixed inset-0 z-50 flex items-start justify-end p-4 pt-16 transition-opacity duration-200 ${
+        isClosing ? 'opacity-0' : 'opacity-100'
+      }`} 
+      onClick={onClose}
+    >
       <div 
-        className={`relative flex flex-col bg-[#0d1117] border border-[#232530] rounded-2xl shadow-2xl w-full max-w-[440px] h-[calc(100vh-5rem)] overflow-hidden ${isClosing ? 'animate-apple-scale-out' : 'animate-apple-scale'}`}
+        data-gobe-chat-modal="true"
+        className={`relative flex flex-col bg-[#0d1117] border border-[#232530] rounded-2xl shadow-2xl w-full max-w-[440px] h-[calc(100vh-5rem)] overflow-hidden ${
+          isClosing ? 'animate-apple-scale-out' : 'animate-apple-scale'
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
-        
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-transparent shrink-0 relative z-20">
           <div className="flex items-center gap-4 text-zinc-500">
             <button 
-              onClick={() => setChatHistory([])} 
-              className="hover:text-zinc-200 transition-colors flex items-center justify-center h-5 w-5" 
+              onClick={resetChat} 
+              className="hover:text-zinc-200 transition-colors flex items-center justify-center h-5 w-5 cursor-pointer" 
               title="New Chat"
             >
               <Plus className="w-4 h-4" />
@@ -139,127 +291,193 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, onMaximiz
             <div className="relative flex items-center">
               <button 
                 onClick={() => setShowHistory(!showHistory)} 
-                className="hover:text-zinc-200 transition-colors flex items-center justify-center h-5 w-5" 
+                className="hover:text-zinc-200 transition-colors flex items-center justify-center h-5 w-5 cursor-pointer" 
                 title="Recent Chats"
               >
                 <History className="w-4 h-4" />
               </button>
               {showHistory && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-[#161b22] border border-[#30363d] rounded-xl shadow-xl p-1.5 z-10 animate-apple-fade">
+                <div className="absolute top-full left-0 mt-2 w-64 bg-[#161b22] border border-[#30363d] rounded-xl shadow-xl p-1.5 z-50 animate-apple-fade">
                   <div className="text-[10px] font-semibold text-zinc-500 uppercase tracking-wider px-2 py-1 mb-1">Recent Chats</div>
-                  <button onClick={() => setShowHistory(false)} className="w-full text-left px-2 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] rounded-lg transition-colors truncate">Fix race condition in queue...</button>
-                  <button onClick={() => setShowHistory(false)} className="w-full text-left px-2 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] rounded-lg transition-colors truncate">Prisma performance issues</button>
-                  <button onClick={() => setShowHistory(false)} className="w-full text-left px-2 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] rounded-lg transition-colors truncate">Generate auth tests</button>
+                  {isLoadingConversations ? (
+                    <div className="px-2 py-1.5 text-xs text-zinc-500">Loading…</div>
+                  ) : conversations.length === 0 ? (
+                    <div className="px-2 py-1.5 text-xs text-zinc-500">No previous chats yet</div>
+                  ) : (
+                    <>
+                      <div className="max-h-64 overflow-y-auto space-y-0.5">
+                        {conversations.map((conversation) => (
+                          <button
+                            key={conversation.id}
+                            onClick={() => {
+                              selectConversation(conversation);
+                              setShowHistory(false);
+                            }}
+                            className={`w-full text-left px-2 py-1.5 text-xs rounded-lg transition-colors truncate cursor-pointer ${
+                              activeConversation?.id === conversation.id
+                                ? 'text-[#c0f200] bg-[#c0f200]/10'
+                                : 'text-zinc-300 hover:bg-[#21262d]'
+                            }`}
+                          >
+                            {conversation.title}
+                          </button>
+                        ))}
+                      </div>
+                      {hasMoreConversations && (
+                        <button
+                          onClick={() => void loadMoreConversations()}
+                          disabled={isLoadingMoreConversations}
+                          className="w-full mt-1 pt-1.5 border-t border-[#30363d] px-2 py-1.5 text-[11px] text-zinc-500 hover:text-zinc-300 disabled:opacity-50 transition-colors cursor-pointer"
+                        >
+                          {isLoadingMoreConversations ? 'Loading…' : 'Load older chats'}
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </div>
           </div>
           
-          <div className="text-xs font-semibold text-zinc-300 select-none">
-            New Chat
+          <div className="text-xs font-semibold text-zinc-300 select-none truncate max-w-[40%]">
+            {activeConversation?.title || 'New Chat'}
           </div>
           
           <div className="flex items-center gap-4 text-zinc-500">
-            <button onClick={handleMaximize} className="hover:text-zinc-200 transition-colors cursor-pointer">
+            <button onClick={handleMaximize} className="hover:text-zinc-200 transition-colors cursor-pointer" title="Expand Chat">
               <ArrowsPointingOutIcon className="w-4 h-4" />
             </button>
-            <button onClick={handleClose} className="hover:text-zinc-200 transition-colors cursor-pointer">
+            <button onClick={handleClose} className="hover:text-zinc-200 transition-colors cursor-pointer" title="Minimize">
               <MinusIcon className="w-4 h-4" />
             </button>
-            <button onClick={handleClose} className="hover:text-zinc-200 transition-colors cursor-pointer">
+            <button onClick={handleClose} className="hover:text-zinc-200 transition-colors cursor-pointer" title="Close">
               <XMarkIcon className="w-5 h-5" />
             </button>
           </div>
         </div>
 
         {/* Chat Body */}
-        <div className="flex-1 overflow-y-auto p-4 px-6 flex flex-col">
-          {chatHistory.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center">
-              <div className="w-16 h-16 rounded-3xl bg-[#16171d] border border-[#232530] flex items-center justify-center mb-5 shadow-sm">
-                <Bot className="w-8 h-8 text-zinc-600" />
-              </div>
-              <h2 className="text-xl font-semibold text-zinc-200 tracking-tight mb-2">How can I help you today?</h2>
-              <p className="text-[13px] text-zinc-500 max-w-xs mb-6">
-                Ask Gobe AI to explain code, generate tests, or debug errors in your repositories.
-              </p>
-              <div className="flex flex-col gap-2 w-full max-w-[280px]">
-                <button onClick={() => setInput('Summarize my active PRs')} className="flex items-center gap-2 px-3.5 py-2.5 bg-[#16171d] hover:bg-[#1a1b22] border border-[#232530] hover:border-zinc-500 rounded-xl text-xs text-zinc-300 transition-colors text-left cursor-pointer">
-                  <GitPullRequest className="w-4 h-4 text-zinc-500 shrink-0" />
-                  Summarize my active PRs
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 px-6 flex flex-col">
+          {isLoadingMessages ? (
+            <div className="flex-1 flex items-center justify-center text-xs text-zinc-500 gap-2">
+              <span className="w-3.5 h-3.5 border-2 border-zinc-600 border-t-[#c0f200] rounded-full animate-spin" />
+              Loading chat…
+            </div>
+          ) : chatHistory.length === 0 ? (
+            <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
+              {/* Greeting & Logo: Horizontal single-line with Instrument Serif, refreshable & blinking */}
+              <button
+                type="button"
+                onClick={() => {
+                  setGreeting(getChatGreeting());
+                  triggerLogoBlink();
+                }}
+                className="mb-8 flex items-center justify-center gap-3 cursor-pointer group select-none transition-transform active:scale-[0.98]"
+              >
+                <div
+                  key={logoBlinkKey}
+                  className={`inline-flex items-center justify-center shrink-0 pointer-events-none group-hover:scale-105 transition-transform ${
+                    isLogoBlinking ? 'animate-gobe-blink' : ''
+                  }`}
+                >
+                  <GobeAiLogo className="w-8 h-8 sm:w-9 sm:h-9 overflow-visible" />
+                </div>
+                <h1 className="font-instrument font-normal text-2xl sm:text-[26px] tracking-tight leading-none text-zinc-100 group-hover:text-white transition-colors">
+                  {greeting}
+                </h1>
+              </button>
+
+              {/* Suggestion Prompts (subheading removed as requested) */}
+              <div className="flex flex-col gap-2 w-full max-w-[320px]">
+                <button
+                  onClick={() => setInput('Summarize my active PRs')}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#16171d] hover:bg-[#1a1b22] border border-[#232530] hover:border-zinc-500 rounded-xl text-xs text-zinc-300 transition-colors text-left cursor-pointer"
+                >
+                  <GitPullRequest className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                  <span className="truncate">Summarize my active PRs</span>
                 </button>
-                <button onClick={() => setInput('Check for security vulnerabilities')} className="flex items-center gap-2 px-3.5 py-2.5 bg-[#16171d] hover:bg-[#1a1b22] border border-[#232530] hover:border-zinc-500 rounded-xl text-xs text-zinc-300 transition-colors text-left cursor-pointer">
-                  <ShieldCheckIcon className="w-4 h-4 text-zinc-500 shrink-0" />
-                  Check for security vulnerabilities
+                <button
+                  onClick={() => setInput('Check for security vulnerabilities')}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#16171d] hover:bg-[#1a1b22] border border-[#232530] hover:border-zinc-500 rounded-xl text-xs text-zinc-300 transition-colors text-left cursor-pointer"
+                >
+                  <ShieldCheckIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                  <span className="truncate">Check for security vulnerabilities</span>
                 </button>
-                <button onClick={() => setInput('Generate unit tests for this pull request')} className="flex items-center gap-2 px-3.5 py-2.5 bg-[#16171d] hover:bg-[#1a1b22] border border-[#232530] hover:border-zinc-500 rounded-xl text-xs text-zinc-300 transition-colors text-left cursor-pointer">
-                  <LightBulbIcon className="w-4 h-4 text-zinc-500 shrink-0" />
-                  Generate unit tests for this pull request
+                <button
+                  onClick={() => setInput('Generate unit tests for this pull request')}
+                  className="flex items-center gap-2.5 px-3.5 py-2.5 bg-[#16171d] hover:bg-[#1a1b22] border border-[#232530] hover:border-zinc-500 rounded-xl text-xs text-zinc-300 transition-colors text-left cursor-pointer"
+                >
+                  <LightBulbIcon className="w-3.5 h-3.5 text-zinc-500 shrink-0" />
+                  <span className="truncate">Generate unit tests for this pull request</span>
                 </button>
               </div>
             </div>
           ) : (
-            <div className="space-y-6 w-full pb-4">
-              {chatHistory.map((msg) => (
-                <div key={msg.id}>
-                  {msg.sender === 'user' ? (
-                    <div className="flex items-start gap-3 flex-row-reverse">
-                      <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-[10px] font-bold text-black shrink-0">
-                        AM
-                      </div>
-                      <div className="space-y-1.5 max-w-[85%] text-right">
-                        {msg.prContext && (
-                          <div className="flex items-center justify-end">
-                            <span className="px-1.5 py-0.5 bg-[#1a1b22] border border-[#232530] rounded text-[9px] font-mono text-zinc-500">
-                              {msg.prContext}
-                            </span>
+            <div className="space-y-3.5 w-full pb-[40vh]">
+              {chatHistory.map((msg, index) => {
+                const isLatestUserMessage =
+                  msg.sender === 'user' && index >= chatHistory.length - 2;
+                const isLatestAiMessage =
+                  msg.sender === 'ai' && (
+                    index === chatHistory.length - 1 || 
+                    !chatHistory.slice(index + 1).some((m) => m.sender === 'ai')
+                  );
+
+                return (
+                  <div 
+                    key={msg.id}
+                    ref={isLatestUserMessage ? latestUserMessageRef : undefined}
+                  >
+                    {msg.sender === 'user' ? (
+                      <div className="flex items-start gap-3 flex-row-reverse">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center text-[10px] font-bold text-black shrink-0">
+                          AM
+                        </div>
+                        <div className="space-y-1.5 max-w-[85%] text-right">
+                          {msg.prContext && (
+                            <div className="flex items-center justify-end">
+                              <span className="px-1.5 py-0.5 bg-[#1a1b22] border border-[#232530] rounded text-[9px] font-mono text-zinc-500">
+                                {msg.prContext}
+                              </span>
+                            </div>
+                          )}
+                          <div className="text-[14px] leading-relaxed whitespace-pre-wrap px-3.5 py-2 bg-[#21262d] text-zinc-200 rounded-2xl font-medium shadow-sm inline-block text-left">
+                            {msg.text}
                           </div>
-                        )}
-                        <div className="text-[14px] leading-relaxed whitespace-pre-wrap px-4 py-2.5 bg-[#21262d] text-zinc-200 rounded-2xl font-medium shadow-sm inline-block">
-                          {msg.text}
                         </div>
                       </div>
-                    </div>
-                  ) : (
-                    <AIChatMessage 
-                      message={msg} 
-                      onCopySnippet={handleCopySnippet} 
-                      copiedCodeId={copiedCodeId}
-                      onFollowUpClick={(text) => setInput(text)}
-                    />
-                  )}
-                </div>
-              ))}
+                    ) : (
+                      <AIChatMessage 
+                        message={msg} 
+                        onCopySnippet={handleCopySnippet} 
+                        copiedCodeId={copiedSnippetId}
+                        onFollowUpClick={(text) => setInput(text)}
+                        onFeedback={sendFeedback}
+                        isLatest={isLatestAiMessage}
+                      />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* Input Area */}
         <div className="p-4 pt-0 shrink-0">
-          <div className="bg-[#161b22] border border-[#30363d] rounded-[24px] p-1.5 flex items-end gap-2 focus-within:border-zinc-500 transition-colors shadow-sm relative">
-            
-            <div className="relative shrink-0">
-              <button 
-                onClick={() => setShowPrMenu(!showPrMenu)}
-                title={selectedPrChat ? `Selected: ${selectedPrChat}` : 'Select PR'}
-                className={`flex items-center justify-center w-7 h-7 transition-colors rounded-full border cursor-pointer ${
-                  selectedPrChat 
-                    ? 'bg-[#c0f200]/10 text-[#c0f200] border-[#c0f200]/30 hover:bg-[#c0f200]/20' 
-                    : 'bg-[#21262d] text-zinc-400 hover:text-zinc-200 border-transparent'
-                }`}
-              >
-                <GitPullRequest className="w-3.5 h-3.5" />
+          {error && (
+            <div className="mb-2 px-3 py-2 bg-red-500/10 border border-red-500/30 rounded-lg text-[11px] text-red-300 flex items-center justify-between gap-2">
+              <span className="truncate">{error}</span>
+              <button onClick={clearError} className="shrink-0 hover:text-red-200 cursor-pointer" title="Dismiss">
+                <XMarkIcon className="w-3.5 h-3.5" />
               </button>
-
-              {showPrMenu && (
-                <div className="absolute bottom-full left-0 mb-2 w-48 bg-[#161b22] border border-[#30363d] rounded-xl shadow-xl p-1 z-10 animate-apple-fade">
-                  <button onClick={() => { setSelectedPrChat('PR #12'); setShowPrMenu(false); }} className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] rounded-md transition-colors cursor-pointer">PR #12</button>
-                  <button onClick={() => { setSelectedPrChat('PR #141'); setShowPrMenu(false); }} className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] rounded-md transition-colors cursor-pointer">PR #141</button>
-                  <button onClick={() => { setSelectedPrChat(null); setShowPrMenu(false); }} className="w-full text-left px-3 py-1.5 text-xs text-zinc-500 hover:bg-[#21262d] rounded-md transition-colors cursor-pointer mt-1 border-t border-[#30363d] pt-1">Clear Selection</button>
-                </div>
-              )}
             </div>
-            
+          )}
+          <div className="w-full bg-[#161b22] border border-[#30363d] rounded-[24px] p-3 flex flex-col transition-all relative min-h-[96px] sm:min-h-[104px]">
+            {/* Chromatic Rim & Moving Aurora (Same Glow) */}
+            <ChatBottomLightBeam active={true} showBump={chatHistory.length === 0} />
+
+            {/* Textarea on top: more height permanently */}
             <textarea
               ref={textareaRef}
               value={input}
@@ -270,32 +488,43 @@ export const ChatModal: React.FC<ChatModalProps> = ({ isOpen, onClose, onMaximiz
                   handleSendMessage();
                 }
               }}
-              rows={1}
+              rows={2}
               placeholder="Ask anything..."
-              className="flex-1 bg-transparent text-zinc-200 placeholder:text-zinc-500 resize-none outline-none max-h-[150px] text-[13px] font-sans py-1 leading-relaxed overflow-x-hidden overflow-y-auto mb-[1px]"
+              className="w-full flex-1 bg-transparent text-zinc-200 placeholder:text-zinc-500 resize-none outline-none text-[13px] sm:text-[14px] font-sans px-1.5 pt-0.5 pb-1 leading-relaxed overflow-x-hidden overflow-y-auto min-h-[44px] max-h-[160px] relative z-10"
             />
-            
-            <div className="flex items-center gap-1.5 shrink-0 mb-0.5">
 
-              <button 
-                onClick={() => setShowModelMenu(!showModelMenu)}
-                className="flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium text-zinc-400 hover:text-zinc-200 hover:bg-[#21262d] transition-colors cursor-pointer"
-              >
-                <Bot className="w-3 h-3" />
-                <span>GPT-4o</span>
-                <ChevronDown className="w-3 h-3" />
-              </button>
-              
-              {showModelMenu && (
-                <div className="absolute bottom-full right-8 mb-2 w-48 bg-[#161b22] border border-[#30363d] rounded-xl shadow-xl p-1 z-10 animate-apple-fade">
-                  <button onClick={() => setShowModelMenu(false)} className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] rounded-md transition-colors cursor-pointer">GPT-4o</button>
-                  <button onClick={() => setShowModelMenu(false)} className="w-full text-left px-3 py-1.5 text-xs text-zinc-300 hover:bg-[#21262d] rounded-md transition-colors cursor-pointer">Claude 3.5 Sonnet</button>
-                </div>
-              )}
+            {/* Bottom Toolbar Row: Pinned to bottom of the card */}
+            <div className="flex items-center justify-between px-0.5 pt-1.5 border-t border-transparent relative z-10">
+              {/* Left: PR Context Selection */}
+              <div className="relative">
+                <PrSummaryDropdown
+                  selectedPr={selectedPr}
+                  onSelectPr={setSelectedPr}
+                  buttonSize="sm"
+                  fallbackList={pullRequests.map((pr) => ({
+                    id: pr.id,
+                    prId: pr.number,
+                    title: pr.title,
+                    createdAt: pr.createdAt,
+                  }))}
+                />
+              </div>
 
-              <button onClick={handleSendMessage} className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors shrink-0 shadow-sm border cursor-pointer ${input.trim() ? 'bg-[#c0f200] text-black border-[#c0f200]' : 'bg-[#21262d] hover:bg-[#30363d] text-zinc-400 border-transparent'}`}>
-                <ArrowUp className="w-3.5 h-3.5" />
-              </button>
+              {/* Right: Model Picker (No Ctrl /) & Send */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <ModelPickerButton size="sm" placement="top" align="right" showShortcutBadge={false} />
+                <button
+                  onClick={handleSendMessage}
+                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all shrink-0 shadow-sm border cursor-pointer ${
+                    input.trim()
+                      ? 'bg-[#c0f200] text-black border-[#c0f200] hover:brightness-110'
+                      : 'bg-[#21262d] hover:bg-[#30363d] text-zinc-400 border-transparent'
+                  }`}
+                  title="Send message"
+                >
+                  <ArrowUp className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -1,0 +1,88 @@
+---
+title: 'Review Agent & Prompts'
+sidebarTitle: 'Review Agent'
+icon: 'sparkles'
+description: 'Structured output schema, zero-nitpick prompt principles, and confidence scoring'
+---
+
+Source of truth: `backend/src/config/prompts.ts`
+
+The review agent (`CODE_REVIEW_SYSTEM_PROMPT`) acts as a senior-engineer code reviewer. It optimizes for **high-signal findings over volume** — a clean PR with zero comments is a valid, successful result.
+
+---
+
+## What the Agent Generates
+
+The agent always returns a single JSON object (no Markdown fences; any fences that a less intelligent model adds are trimmed by a static function) with this shape:
+
+```json
+{
+  "summary": {
+    "overview": "Concise summary of what the PR changes and the overall review result.",
+    "intent": "What the PR appears to be trying to accomplish.",
+    "risk": "low | medium | high",
+    "findingsCount": 0
+  },
+  "comments": [
+    {
+      "file": "src/example.ts",
+      "line": 42,
+      "endLine": 42,
+      "severity": "CRITICAL | MAJOR | MINOR",
+      "confidence": 95,
+      "title": "Short description of the problem",
+      "comment": "Problem + failure condition + impact + recommended fix.",
+      "failureScenario": "Concrete scenario showing how it can occur.",
+      "suggestedFix": "Specific and minimal fix."
+    }
+  ],
+  "confidence": {
+    "overall": 0,
+    "performance": 0,
+    "security": 0
+  },
+  "agenticFixPrompt": null
+}
+```
+
+### Field expectations
+
+| Field | What to expect |
+|---|---|
+| `summary.overview` | Human-readable markdown-ish prose; safe to render with a markdown renderer |
+| `summary.risk` | `low` (no meaningful issues), `medium` (MINOR only), `high` (≥1 MAJOR/CRITICAL) |
+| `summary.findingsCount` | Always equals `comments.length` |
+| `comments[].file` / `line` | Anchored to a changed line in the **NEW** version of the file |
+| `comments[].severity` | `CRITICAL`, `MAJOR`, or `MINOR` based on real-world impact |
+| `comments[].confidence` | Integer 0–100; only findings ≥70 are normally reported |
+| `confidence.*` | Reviewer's confidence the change is correct/safe per dimension (0–100). High = good |
+| `agenticFixPrompt` | Markdown prompt for an autonomous coding agent — only when CRITICAL/MAJOR findings exist, otherwise `null` |
+
+### Quality guarantees baked into the prompt
+
+- No style/naming/formatting nitpicks, no speculative issues
+- Findings must be introduced or materially exposed by this PR
+- Root causes are deduplicated (one comment per underlying problem)
+- Every finding includes a realistic failure path and an actionable fix
+
+---
+
+## How to Interact With This Data
+
+1. **Persistence** — the raw JSON is stored on the `review` record:
+   - `review.rawReviewJSON` → full parsed JSON above
+   - `review.reviewSummary` → text summary (rendered as markdown in the client's AI Review tab)
+   - `review.status` / `review.completedAt` / `review.reviewedCommitSha` → lifecycle metadata
+
+2. **Client rendering** —
+   - Summary tab: `summary.overview` via the markdown component in `PullRequestReviewView`
+   - Findings: map each `comments[]` item to an `AIFinding` (severity badge, explanation from `comment`, patch from `suggestedFix`)
+   - Score widget: use `confidence.overall` instead of hardcoding
+
+3. **Consumers should**:
+   - Treat `risk === 'high'` as blocking-worthy
+   - Never assume `comments` is non-empty
+   - Use `failureScenario` + `comment` for detail views; keep list rows short via `title`
+   - Surface `agenticFixPrompt` as a one-click "fix with agent" action when present
+
+4. **Review modes** — `REVIEW_MODES` (`Quick` / `Focused` / `Deep Dive`) only change depth (context scope, verification passes, max findings cap 5/10/20). The JSON output contract is identical across all modes.

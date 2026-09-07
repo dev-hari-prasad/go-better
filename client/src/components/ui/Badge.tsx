@@ -68,6 +68,7 @@ export const StatusBadge: React.FC<{ status: ReviewStatus; size?: 'sm' | 'md' }>
     changes_requested: { label: 'Changes Requested', variant: 'changes_requested' as const },
     approved: { label: 'Approved', variant: 'approved' as const },
     completed: { label: 'Review Completed', variant: 'approved' as const },
+    failed: { label: 'Failed', variant: 'critical' as const },
   };
 
   const current = config[status];

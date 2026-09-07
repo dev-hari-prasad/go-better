@@ -2,7 +2,7 @@ export type FindingSeverity = 'critical' | 'warning' | 'suggestion' | 'info';
 
 export type FindingCategory = 'security' | 'performance' | 'bug_risk' | 'maintainability' | 'architecture';
 
-export type ReviewStatus = 'pending' | 'in_progress' | 'changes_requested' | 'approved' | 'completed';
+export type ReviewStatus = 'pending' | 'in_progress' | 'changes_requested' | 'approved' | 'completed' | 'failed';
 
 export interface Repository {
   id: string;
@@ -16,7 +16,7 @@ export interface Repository {
   activePullRequestsCount: number;
   openFindingsCount: number;
   lastSyncedAt: string;
-  provider: 'github' | 'gitlab';
+  provider: 'github';
 }
 
 export interface PullRequest {
@@ -38,7 +38,7 @@ export interface PullRequest {
   changedFilesCount: number;
   createdAt: string;
   updatedAt: string;
-  aiReviewSummary: {
+  aiReviewSummary?: {
     overview: string;
     score: number; // 0-100 quality score
     criticalCount: number;
@@ -46,7 +46,10 @@ export interface PullRequest {
     suggestionCount: number;
     infoCount: number;
     keyTakeaways: string[];
+    agenticFixPrompt?: string | null;
   };
+  agenticFixPrompt?: string | null;
+  htmlUrl?: string;
 }
 
 export interface DiffLine {
@@ -122,7 +125,10 @@ export interface UserSettings {
   geminiApiKey: string;
   vercelApiKey: string;
   openRouterApiKey: string;
-  customEndpoints: { id: string, name: string, url: string, key: string }[];
+  inceptionApiKey?: string;
+  customEndpoints: { id: string, name: string, url: string, key: string, models?: string[], enabled?: boolean }[];
+  providerSelectedModels?: Record<string, string[]>;
+  providerEnabled?: Record<string, boolean>;
   autoReviewPullRequests: boolean;
   severityThreshold: FindingSeverity;
   customPromptRules: string;
@@ -137,4 +143,21 @@ export interface UserSettings {
   slackWebhookUrl: string;
   notifyOnCritical: boolean;
   teamMembersCount: number;
+}
+
+export interface LatestCodeReview {
+  id: string;
+  pullRequestId: string;
+  prNumber: number;
+  prTitle: string;
+  repoFullName: string;
+  status: ReviewStatus;
+  score?: number;
+  summary: string;
+  criticalCount: number;
+  warningCount: number;
+  suggestionCount: number;
+  totalFindings: number;
+  model: string;
+  reviewedAt: string;
 }

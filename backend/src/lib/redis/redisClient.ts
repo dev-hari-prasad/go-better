@@ -13,6 +13,9 @@ if (!REDIS_URL) {
 // Intalize redis
 const redis = new Redis(REDIS_URL, {
   maxRetriesPerRequest: null,
+
+  enableReadyCheck: true,
+  keepAlive: 10_000,
 })
 
 export default redis

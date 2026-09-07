@@ -1,0 +1,1 @@
+ALTER TABLE "aiConversation" DROP CONSTRAINT "aiConversation_user_id_unique";

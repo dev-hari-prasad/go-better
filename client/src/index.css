@@ -3,6 +3,11 @@
 @theme {
   --font-sans: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-serif: 'Instrument Serif', Georgia, serif;
+}
+
+@utility font-instrument {
+  font-family: 'Instrument Serif', Georgia, serif;
 }
 
 @layer base {
@@ -62,6 +67,17 @@
   }
 }
 
+@keyframes popoverIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .animate-apple-fade {
   animation: backdropFade 0.3s ease-out forwards;
 }
@@ -70,11 +86,126 @@
   animation: modalScale 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.animate-popover {
+  transform-origin: bottom left;
+  animation: popoverIn 160ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .apple-button {
   transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.15s ease, border-color 0.15s ease;
 }
 .apple-button:active {
   transform: scale(0.98);
+}
+
+/* Gobe AI Logo Multi-Facet Neon Light Blinking Animation (Pure Vector Opacity & Brightness - Zero Square Artifacts) */
+@keyframes gobeFacetLeftLight {
+  0% { opacity: 1; filter: brightness(1); }
+  6% { opacity: 0.12; filter: brightness(0.3); }
+  12% { opacity: 1; filter: brightness(1.75); }
+  18% { opacity: 0.2; filter: brightness(0.4); }
+  25% { opacity: 1; filter: brightness(1.95); }
+  40% { opacity: 0.65; filter: brightness(1.2); }
+  54% { opacity: 1; filter: brightness(1.6); }
+  75% { opacity: 0.95; filter: brightness(1.15); }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+@keyframes gobeFacetRightLight {
+  0% { opacity: 1; filter: brightness(1); }
+  9% { opacity: 0.15; filter: brightness(0.3); }
+  15% { opacity: 1; filter: brightness(1.7); }
+  27% { opacity: 0.1; filter: brightness(0.25); }
+  34% { opacity: 1; filter: brightness(1.9); }
+  48% { opacity: 0.55; filter: brightness(1.1); }
+  64% { opacity: 1; filter: brightness(1.6); }
+  84% { opacity: 0.9; filter: brightness(1.1); }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+@keyframes gobeFacetBottomLight {
+  0% { opacity: 1; filter: brightness(1); }
+  4% { opacity: 0.08; filter: brightness(0.2); }
+  13% { opacity: 1; filter: brightness(1.6); }
+  22% { opacity: 0.25; filter: brightness(0.5); }
+  31% { opacity: 0.9; filter: brightness(1.4); }
+  43% { opacity: 0.12; filter: brightness(0.3); }
+  56% { opacity: 1; filter: brightness(1.85); }
+  72% { opacity: 1; filter: brightness(1.35); }
+  100% { opacity: 1; filter: brightness(1); }
+}
+
+.gobe-facet-left,
+.gobe-facet-right,
+.gobe-facet-bottom {
+  transition: filter 0.15s ease, opacity 0.15s ease;
+}
+
+.group:hover .gobe-facet-left,
+.group\/logo:hover .gobe-facet-left,
+.group\/gobe-logo:hover .gobe-facet-left,
+.group\/topbar-logo:hover .gobe-facet-left,
+.group\/quick-chat:hover .gobe-facet-left,
+button:hover .gobe-facet-left,
+a:hover .gobe-facet-left,
+.gobe-logo-interactive:hover .gobe-facet-left,
+.animate-gobe-blink .gobe-facet-left,
+.animate-gobe-blink.gobe-facet-left {
+  animation: gobeFacetLeftLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .gobe-facet-right,
+.group\/logo:hover .gobe-facet-right,
+.group\/gobe-logo:hover .gobe-facet-right,
+.group\/topbar-logo:hover .gobe-facet-right,
+.group\/quick-chat:hover .gobe-facet-right,
+button:hover .gobe-facet-right,
+a:hover .gobe-facet-right,
+.gobe-logo-interactive:hover .gobe-facet-right,
+.animate-gobe-blink .gobe-facet-right,
+.animate-gobe-blink.gobe-facet-right {
+  animation: gobeFacetRightLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.group:hover .gobe-facet-bottom,
+.group\/logo:hover .gobe-facet-bottom,
+.group\/gobe-logo:hover .gobe-facet-bottom,
+.group\/topbar-logo:hover .gobe-facet-bottom,
+.group\/quick-chat:hover .gobe-facet-bottom,
+button:hover .gobe-facet-bottom,
+a:hover .gobe-facet-bottom,
+.gobe-logo-interactive:hover .gobe-facet-bottom,
+.animate-gobe-blink .gobe-facet-bottom,
+.animate-gobe-blink.gobe-facet-bottom {
+  animation: gobeFacetBottomLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Rockstar Games Style Perimeter Moving Border Light */
+@keyframes rockstarBorderSpin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-rockstar-beam {
+  animation: rockstarBorderSpin 2.2s linear infinite;
+}
+
+/* Triangle Perimeter Laser Trace Animation */
+@keyframes gobeTriangleTrace {
+  0% {
+    stroke-dashoffset: 0;
+  }
+  100% {
+    stroke-dashoffset: -100;
+  }
+}
+
+.gobe-triangle-beam {
+  animation: gobeTriangleTrace 2.2s linear infinite;
 }
 
 /* Spacious Table Row Styling */
@@ -162,6 +293,15 @@
 @keyframes stream-in {
   0% { filter: blur(5px); opacity: 0; transform: translateY(2px); }
   100% { filter: blur(0); opacity: 1; transform: translateY(0); }
+}
+@keyframes wordStreamIn {
+  0% { opacity: 0; filter: blur(4px); transform: translateY(2px); }
+  100% { opacity: 1; filter: blur(0); transform: translateY(0); }
+}
+.animate-word-stream {
+  display: inline-block;
+  animation: wordStreamIn 200ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: opacity, filter, transform;
 }
 @keyframes fade-in {
   from { opacity: 0; }
@@ -256,6 +396,311 @@ button, a, [role="button"], input[type="submit"], input[type="button"], label {
 
 .animate-pulse-glow {
   animation: pulse-ring 2s cubic-bezier(0.66, 0, 0, 1) infinite;
+}
+
+/* Slanted (115deg) Wavy Skeleton Glare / Shimmer - Clean, silent monochromatic */
+@keyframes skeletonWaveGlare {
+  0% {
+    background-position: 250% 0;
+  }
+  50% {
+    background-position: 50% 100%;
+  }
+  100% {
+    background-position: -150% 0;
+  }
+}
+
+.skeleton-glare {
+  background: linear-gradient(
+    115deg,
+    #131620 0%,
+    #171b26 20%,
+    #1c2130 36%,
+    rgba(255, 255, 255, 0.08) 50%,
+    #1c2130 64%,
+    #171b26 80%,
+    #131620 100%
+  );
+  background-size: 280% 200%;
+  animation: skeletonWaveGlare 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+.skeleton-glare-subtle {
+  background: linear-gradient(
+    115deg,
+    rgba(255, 255, 255, 0.02) 0%,
+    rgba(255, 255, 255, 0.04) 22%,
+    rgba(255, 255, 255, 0.09) 50%,
+    rgba(255, 255, 255, 0.04) 78%,
+    rgba(255, 255, 255, 0.02) 100%
+  );
+  background-size: 280% 200%;
+  animation: skeletonWaveGlare 2.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+}
+
+/* Custom Sonner Notification: Smooth vertical come-up on entrance, smooth slide-down on exit */
+[data-sonner-toast] {
+  transform: var(--y, translateY(0)) translateY(18px) scale(0.98) !important;
+  opacity: 0 !important;
+  transition: transform 340ms cubic-bezier(0.16, 1, 0.3, 1), opacity 260ms ease, height 300ms ease, box-shadow 200ms !important;
+}
+
+[data-sonner-toast][data-mounted='true'] {
+  transform: var(--y, translateY(0)) translateY(0) scale(1) !important;
+  opacity: 1 !important;
+}
+
+[data-sonner-toast][data-swiping='true'] {
+  transform: var(--y, translateY(0)) translateY(var(--swipe-amount-y, 0px)) translateX(var(--swipe-amount-x, 0px)) !important;
+  transition: none !important;
+  opacity: 1 !important;
+}
+
+[data-sonner-toast][data-removed='true'],
+[data-sonner-toast][data-swipe-out='true'],
+[data-sonner-toast][data-state='closed'] {
+  transform: var(--y, translateY(0)) translateY(18px) scale(0.98) !important;
+  opacity: 0 !important;
+  transition: transform 240ms cubic-bezier(0.4, 0, 1, 1), opacity 200ms ease !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  display: flex !important;
+  align-items: flex-start !important;
+  gap: 10px !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-icon] {
+  align-self: flex-start !important;
+  margin-top: 2px !important;
+  margin-right: 2px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-content] {
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
+  min-width: 0 !important;
+  flex: 1 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-title] {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-description] {
+  font-size: 12px !important;
+  line-height: 1.45 !important;
+  color: #a1a1aa !important;
+  margin-top: 2px !important;
+}
+
+/* Shiny Glare Sweep Animation (Runs exactly 3 times on initial load, slower, more slanted, stops on the right end) */
+@keyframes shinyGlareSweep {
+  0% {
+    transform: translateX(-190%) skewX(-38deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 0.85;
+  }
+  60% {
+    transform: translateX(300%) skewX(-38deg);
+    opacity: 0.85;
+  }
+  61% {
+    transform: translateX(300%) skewX(-38deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(300%) skewX(-38deg);
+    opacity: 0;
+  }
+}
+
+.animate-shiny-glare-thrice {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shiny-glare-thrice::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 15%,
+    rgba(192, 242, 0, 0.28) 42%,
+    rgba(255, 255, 255, 0.85) 52%,
+    rgba(192, 242, 0, 0.28) 62%,
+    transparent 100%
+  );
+  filter: blur(1.5px);
+  pointer-events: none;
+  z-index: 20;
+  animation: shinyGlareSweep 2.4s cubic-bezier(0.25, 1, 0.5, 1) 3 forwards;
+}
+
+.animate-shiny-glare-thrice:hover::after {
+  animation: shinyGlareSweep 1.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+.animate-shiny-glare-loop {
+  position: relative;
+  overflow: hidden;
+}
+
+.animate-shiny-glare-loop::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: 0;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 15%,
+    rgba(192, 242, 0, 0.28) 42%,
+    rgba(255, 255, 255, 0.9) 52%,
+    rgba(192, 242, 0, 0.28) 62%,
+    transparent 100%
+  );
+  filter: blur(1.5px);
+  pointer-events: none;
+  z-index: 20;
+  animation: shinyGlareSweep 2.8s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   Gobe AI Chat: Aurora Lights Traveling Wave inside Chat Box
+   ══════════════════════════════════════════════════════════════════════ */
+@keyframes gobeAuroraTravel {
+  0% {
+    transform: translateX(-75%) scaleY(0.92) scaleX(0.96);
+    opacity: 0.85;
+  }
+  30% {
+    transform: translateX(-48%) scaleY(1.12) scaleX(1.06);
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(-15%) scaleY(0.96) scaleX(0.98);
+    opacity: 0.88;
+  }
+  80% {
+    transform: translateX(-45%) scaleY(1.15) scaleX(1.04);
+    opacity: 0.98;
+  }
+  100% {
+    transform: translateX(-75%) scaleY(0.92) scaleX(0.96);
+    opacity: 0.85;
+  }
+}
+
+@keyframes gobeAuroraBreathe {
+  0%, 100% {
+    filter: brightness(0.94) saturate(1.1);
+  }
+  50% {
+    filter: brightness(1.28) saturate(1.35);
+  }
+}
+
+.animate-aurora-travel {
+  animation: gobeAuroraTravel 8s cubic-bezier(0.42, 0.05, 0.58, 0.95) infinite;
+  will-change: transform;
+}
+
+.animate-aurora-breathe {
+  animation: gobeAuroraBreathe 4.5s ease-in-out infinite;
+}
+
+@keyframes gobeAuroraGlide {
+  0% {
+    transform: translateX(-120%) scaleX(0.9);
+    opacity: 0.65;
+  }
+  25% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateX(0%) scaleX(1.06);
+    opacity: 0.9;
+  }
+  75% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateX(120%) scaleX(0.9);
+    opacity: 0.65;
+  }
+}
+
+.animate-aurora-glide {
+  animation: gobeAuroraGlide 6.5s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes gobeAuroraShimmer {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-aurora-shimmer {
+  background-size: 200% 100%;
+  animation: gobeAuroraShimmer 6s ease-in-out infinite;
+}
+
+/* Ambient Lamp / Light Slow Turn-On Animation (Powers on gradually like turning on a light) */
+@keyframes lightTurnOnSlow {
+  0% {
+    opacity: 0;
+    filter: brightness(0.15) saturate(0.4);
+  }
+  20% {
+    opacity: 0.18;
+    filter: brightness(0.4) saturate(0.65);
+  }
+  45% {
+    opacity: 0.55;
+    filter: brightness(0.72) saturate(0.85);
+  }
+  70% {
+    opacity: 0.85;
+    filter: brightness(0.92) saturate(0.96);
+  }
+  100% {
+    opacity: 1;
+    filter: brightness(1) saturate(1);
+  }
+}
+
+.animate-light-poweron {
+  animation: lightTurnOnSlow 1.9s cubic-bezier(0.2, 0.8, 0.35, 1) both;
+}
+
+.animate-light-poweron-bumpy {
+  animation: lightTurnOnSlow 2.3s cubic-bezier(0.2, 0.8, 0.35, 1) 0.2s both;
 }
 
 

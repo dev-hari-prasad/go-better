@@ -1,0 +1,39 @@
+---
+title: 'Usage & Quotas API'
+sidebarTitle: 'Usage'
+icon: 'chart-pie'
+description: 'Monitor token expenditure, utilized spend, and platform tier limits'
+---
+
+All usage endpoints are mounted under `/usage` and require an authenticated session (`authMiddleware`).
+
+## Overview
+
+GoBetter grants each user a complimentary usage allowance (`perUserSpendLimit = $0.30 USD`) for platform-hosted models. Once this allowance is exhausted, reviews require a configured [BYOK key](/api-reference/byok).
+
+## Endpoints
+
+### 1. Get Current Spend & Quota
+`GET /usage`  
+`GET /usage/:userId`
+
+Retrieves the authenticated user's accumulated spend against the platform limit. The `:userId` parameter defaults to the current session's authenticated user ID.
+
+```bash cURL
+curl -X GET "http://localhost:5000/usage" \
+  -H "Cookie: session=<session_token>"
+```
+
+```json Response (200 OK)
+{
+  "utilizedCost": 0.0842,
+  "allowedExpenditureLimit": 0.3
+}
+```
+
+#### Field Explanations
+
+| Field | Type | Description |
+| :--- | :--- | :--- |
+| `utilizedCost` | `number` | Cumulative financial cost in USD accumulated across model generations. |
+| `allowedExpenditureLimit` | `number` | Maximum allowed spend before BYOK credentials become mandatory (default `$0.30`). |

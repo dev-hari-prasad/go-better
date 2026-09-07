@@ -1,0 +1,121 @@
+---
+title: 'Authentication API'
+sidebarTitle: 'Authentication'
+icon: 'shield-halved'
+description: 'Endpoints for registration, login, OTP verification, sessions, and revocation'
+---
+
+All authentication endpoints are mounted under `/auth`.
+
+## Endpoints
+
+### 1. Register User
+`POST /auth/signup`
+
+Registers a new user with an email, name, and password. An email verification OTP is generated and sent via Resend.
+
+```json Request Body
+{
+  "name": "Jane Developer",
+  "email": "jane@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+---
+
+### 2. Verify Email OTP
+`POST /auth/verify-email`
+
+Validates the 6-digit OTP code sent to the user's email address. Upon success, marks the email as verified, creates an active session, and sets the HTTP-only session cookie.
+
+```json Request Body
+{
+  "email": "jane@example.com",
+  "otp": "123456"
+}
+```
+
+---
+
+### 3. User Login
+`POST /auth/login`
+
+Authenticates an existing user via email and password credentials. Sets an HTTP-only session cookie.
+
+```json Request Body
+{
+  "email": "jane@example.com",
+  "password": "SecurePassword123!"
+}
+```
+
+---
+
+### 4. Forgot Password Request
+`PATCH /auth/forgot-password`
+
+Requests a password reset OTP for a registered account.
+
+```json Request Body
+{
+  "email": "jane@example.com"
+}
+```
+
+---
+
+### 5. Verify Forgot Password OTP
+`PATCH /auth/verify-forgot-password`
+
+Verifies the password recovery OTP code.
+
+```json Request Body
+{
+  "email": "jane@example.com",
+  "otp": "654321"
+}
+```
+
+---
+
+### 6. Reset Password
+`PATCH /auth/reset-password`
+
+Updates the account password for an authenticated session or verified user.
+
+```json Request Body
+{
+  "email": "jane@example.com",
+  "oldPassword": "CurrentPassword123!",
+  "password": "NewSecurePassword456!"
+}
+```
+
+---
+
+### 7. Get Current Session
+`GET /auth/session`
+
+Retrieves the caller's active session metadata and user ID from the HTTP-only cookie.
+
+---
+
+### 8. List All Active Sessions
+`GET /auth/sessions`
+
+Returns a list of all active devices and sessions for the authenticated user.
+
+---
+
+### 9. Sign Out Current Device
+`DELETE /auth/logout`
+
+Revokes the current session in Redis and clears the session cookie.
+
+---
+
+### 10. Sign Out All Devices
+`DELETE /auth/logout-all`
+
+Revokes all active sessions for the user across all browsers and devices.

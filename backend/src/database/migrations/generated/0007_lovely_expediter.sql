@@ -1,0 +1,1 @@
+ALTER TABLE "byok" RENAME COLUMN "custom_model" TO "custom_models";

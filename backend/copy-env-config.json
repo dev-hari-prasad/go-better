@@ -1,0 +1,4 @@
+{
+  "targetEnv": "src\\.env",
+  "outputExample": "src\\.env.example"
+}

@@ -1,0 +1,142 @@
+---
+title: 'Conversation & AI Chat API'
+sidebarTitle: 'AI & Chat'
+icon: 'messages'
+description: 'Interactive AI chat with chunked NDJSON streaming, repository tool calls, and history'
+---
+
+All AI chat and conversation endpoints are mounted under `/conversation` and require an authenticated session (`authMiddleware`).
+
+## Endpoints
+
+### 1. Stream AI Chat & Tool Calls
+`POST /conversation/chat`
+
+Initiates an interactive streaming conversation session. The backend streams line-delimited JSON (`NDJSON`) events using `Transfer-Encoding: chunked`.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `message` | `string` | Yes | The user prompt or question. |
+| `prId` | `string \| number` | No | Pull request ID. When passed, pulls the PR diff and commit details into the prompt context. |
+| `conversationId` | `string` | No | UUID of an existing conversation thread. If omitted, a new thread is created automatically. |
+| `llmModel` | `string` | No | Target model slug (e.g. `openai/gpt-4o`, `deepseek/deepseek-r1`). |
+| `customModelData` | `object` | No | Optional provider override configuration for custom enterprise gateways. |
+
+```json Request Body
+{
+  "message": "Explain the architectural risk identified in the redis cache PR.",
+  "prId": "1049281729",
+  "llmModel": "openai/gpt-4o"
+}
+```
+
+#### Stream Protocol (NDJSON)
+The response stream sends chunked JSON lines separated by `\n`:
+
+```text Response Stream (200 OK)
+{"conversationId":"f47ac10b-58cc-4372-a567-0e02b2c3d479"}
+{"type":"content","content":"The primary "}
+{"type":"content","content":"risk is that "}
+{"type":"tool-call","toolName":"getDiff","toolCallId":"call_abc123","input":{"prId":"1049281729"}}
+{"type":"tool-result","toolName":"getDiff","toolCallId":"call_abc123","output":"diff --git a/redis.ts..."}
+{"type":"content","content":"keys are inserted without an explicit TTL..."}
+```
+
+#### Stream Event Types
+
+| Event Type | Payload Fields | Description |
+| :--- | :--- | :--- |
+| `conversationId` | `conversationId` | Sent on line 1 when a new thread is generated. |
+| `content` | `content` | Text delta emitted by the model during generation. |
+| `tool-call` | `toolName`, `toolCallId`, `input` | Emitted when the model executes a harness tool (`getDiff`, `getPRList`). |
+| `tool-result` | `toolName`, `toolCallId`, `output` | Emitted when a tool finishes executing with repository data. |
+| `error` | `error` | Emitted if an error terminates the stream. |
+
+---
+
+### 2. Get Conversation Message History
+`POST /conversation/chat/:id`
+
+Retrieves up to 100 historical messages from a conversation thread, ordered chronologically.
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | Yes | Conversation thread UUID. |
+
+#### Request Body
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `updatedAt` | `string` | No | Upper-bound timestamp (`<=`) to paginate older messages. |
+
+```json Response (200 OK)
+[
+  {
+    "id": "e6a4b12c-34d5-4e78-90ab-cdef12345678",
+    "inputMessage": "Explain the architectural risk identified in the redis cache PR.",
+    "outputMessage": "The primary risk is that keys are inserted without an explicit TTL...",
+    "usedToolCalls": ["getDiff"],
+    "thumbsFeedback": "postive",
+    "llmModel": "openai/gpt-4o",
+    "inputTokens": 1420,
+    "outputToken": 380,
+    "createdAt": "2026-03-01T10:20:00.000Z"
+  }
+]
+```
+
+---
+
+### 3. List Recent Conversations
+`GET /conversation`
+
+Returns a cursor-paginated list of up to 20 conversation threads for the user, ordered by `updatedAt desc`.
+
+#### Query Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `lastUpdatedAt` | `string` | No | Cursor timestamp. Returns threads updated before this date (`<`). |
+
+```json Response (200 OK)
+[
+  {
+    "id": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+    "title": "Redis Cache Architectural Risk Analysis",
+    "updatedAt": "2026-03-01T10:25:00.000Z"
+  }
+]
+```
+
+---
+
+### 4. Submit Message Feedback
+`PATCH /conversation/feedback`
+
+Records positive or negative user feedback on an individual model response message.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `messageId` | `string` | Yes | Target message UUID from `ai_messages`. |
+| `userFeedback` | `string` | No | Feedback rating: `'postive'` or `'negitive'`. |
+| `regeneratedMsg`| `boolean`| No | Flag indicating the user requested a re-generation of this message. |
+
+```json Request Body
+{
+  "messageId": "e6a4b12c-34d5-4e78-90ab-cdef12345678",
+  "userFeedback": "postive",
+  "regeneratedMsg": false
+}
+```
+
+```json Response (202 Accepted)
+{
+  "message": "updated"
+}
+```

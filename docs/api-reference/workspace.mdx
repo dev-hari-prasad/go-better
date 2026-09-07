@@ -1,0 +1,86 @@
+---
+title: 'Workspace Settings API'
+sidebarTitle: 'Workspace'
+icon: 'sliders'
+description: 'Manage user workspace defaults, review mode models, and custom prompts'
+---
+
+All workspace settings endpoints are mounted under `/workspace` and require an authenticated session (`authMiddleware`).
+
+Settings are compartmentalized by tab. The active tab mapping is `aiSettings`.
+
+## Endpoints
+
+### 1. Get Workspace Tab Settings
+`GET /workspace/:tab`
+
+Retrieves the user's saved configuration for the specified tab.
+
+#### Path Parameters
+
+| Parameter | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `tab` | `string` | Yes | Target settings section (e.g. `aiSettings`). |
+
+```json Response (200 OK)
+[
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "quickModeModel": "openai/gpt-4o-mini",
+    "focusedModeModel": "openai/gpt-4o",
+    "deepModeModel": "anthropic/claude-3.7-sonnet",
+    "systemPrompt": "Focus on high-signal concurrency and race-condition checks.",
+    "quickModePrompt": "Syntax and clear defects only.",
+    "foucsedModePrompt": "Balanced regression and logic review.",
+    "deepModePrompt": "Deep architectural invariant and boundary analysis."
+  }
+]
+```
+
+---
+
+### 2. Create Workspace Settings
+`POST /workspace/:tab`
+
+Creates the initial configuration record for a user under the specified tab.
+
+#### Request Body
+
+```json Request Body
+{
+  "quickModeModel": "openai/gpt-4o-mini",
+  "focusedModeModel": "openai/gpt-4o",
+  "deepModeModel": "anthropic/claude-3.7-sonnet",
+  "systemPrompt": "Focus on high-signal concurrency and race-condition checks."
+}
+```
+
+```json Response (201 Created)
+{
+  "message": "Resource created successfully"
+}
+```
+
+---
+
+### 3. Update Workspace Settings
+`PATCH /workspace/:tab`
+
+Partially updates existing workspace preferences for the authenticated user. Only fields passed in the request body are modified.
+
+#### Whitelisted Fields (`aiSettings`)
+- `quickModeModel`: Model slug for Quick reviews (low latency, high confidence).
+- `focusedModeModel`: Model slug for Focused reviews (balanced).
+- `deepModeModel`: Model slug for Deep Dive reviews (comprehensive audit).
+- `systemPrompt`: Global custom instructions prepended to review prompts.
+- `quickModePrompt`: Mode-specific prompt override for Quick mode.
+- `foucsedModePrompt`: Mode-specific prompt override for Focused mode.
+- `deepModePrompt`: Mode-specific prompt override for Deep mode.
+
+```json Request Body
+{
+  "deepModeModel": "deepseek/deepseek-r1"
+}
+```
+
+**Response**: `204 No Content`

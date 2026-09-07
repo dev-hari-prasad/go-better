@@ -5,9 +5,9 @@ import pullRequests from './pullRequests.ts'
 
 
 // Stores a user's AI chat conversation.
-const aiConversation = pgTable( "aiConversation" ,{
+const aiConversation = pgTable( "ai_conversation" ,{
     id: uuid('id').defaultRandom().primaryKey(),
-    userId: uuid('user_id').unique().references(() => users.id, {
+    userId: uuid('user_id').references(() => users.id, {
         onDelete: 'cascade',
     }),
     title: varchar('title', {length: 225}).notNull(),

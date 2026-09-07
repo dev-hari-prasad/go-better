@@ -1,0 +1,61 @@
+---
+title: 'Users API'
+sidebarTitle: 'Users'
+icon: 'user'
+description: 'Endpoints for user profile modifications and permanent account deletion'
+---
+
+All user endpoints are mounted under `/users` and require an authenticated session (`authMiddleware`).
+
+<Note>
+  To inspect active user session details and ID, use [`GET /auth/session`](/api-reference/auth#7-get-current-session).
+</Note>
+
+## Endpoints
+
+### 1. Update Profile & Notification Preferences
+`PATCH /users`
+
+Updates the authenticated user's display name, email address, or notification settings. At least one field is required.
+
+#### Request Body
+
+| Field | Type | Required | Description |
+| :--- | :--- | :--- | :--- |
+| `name` | `string` | No | Non-empty user display name. |
+| `email` | `string` | No | Valid email address. Automatically converted to lowercase. |
+| `emailNotification` | `boolean` | No | Toggle email notifications for review completions. |
+
+```json Request Body
+{
+  "name": "Jane Developer",
+  "email": "jane@example.com",
+  "emailNotification": true
+}
+```
+
+```json Response (200 OK)
+{
+  "id": "e6a4b12c-34d5-4e78-90ab-cdef12345678",
+  "name": "Jane Developer",
+  "email": "jane@example.com",
+  "emailNotification": true
+}
+```
+
+---
+
+### 2. Delete Account
+`DELETE /users`
+
+Permanently deletes the authenticated user's account and all associated records across PostgreSQL in an atomic database transaction:
+- AI chat threads and conversation messages (`aiConversation`, `aiMessage`)
+- Review findings and raw JSON reports (`review`)
+- Pull requests and repository links (`pullRequests`, `repositories`)
+- Workspace customization settings (`workspaceSettings`)
+- Encrypted BYOK credentials (`byok`)
+- Token usage counters (`usage`)
+- Active sessions in PostgreSQL (`session`) and Redis (`session:<id>`, `byok:<userId>`)
+- Clears both `session` and `sessionId` cookies on the client
+
+**Response**: `204 No Content`

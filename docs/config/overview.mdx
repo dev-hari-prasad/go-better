@@ -1,0 +1,32 @@
+---
+title: 'Configuration Overview'
+sidebarTitle: 'Overview'
+icon: 'sliders'
+description: 'Centralized guide to all environment variables, feature flags, and settings across GoBetter'
+---
+
+GoBetter offers flexible configuration for both server-side operations and client-side presentation. All configurations are strictly isolated between environments to maintain security and portability.
+
+## Configuration Guides
+
+<CardGroup cols={2}>
+  <Card title="Server Configuration" icon="server" href="/config/serverConfiguration">
+    Environment variables, PostgreSQL connection, Redis queue brokers, BYOK provider keys, model fallbacks, and Resend email integration.
+  </Card>
+  <Card title="Client Configuration" icon="desktop" href="/config/clientConfiguration">
+    Vite build variables, feature toggles, local storage parameters, authentication flags, and AI model presets.
+  </Card>
+</CardGroup>
+
+---
+
+## Architecture Principles
+
+1. **Zero Secret Leakage**:
+   The frontend never attempts to read backend environment variables or secrets. Sensitive credentials such as database URLs, Redis brokers, and AI provider API keys remain strictly confined to `backend/.env`.
+
+2. **Cookie-Free Authentication Determination**:
+   Client-side authentication status is determined via state flags and `localStorage.getItem('showMarketingPopup') === 'false'`, ensuring client scripts never need or attempt to inspect HTTP-only session cookies.
+
+3. **BYOK Security**:
+   User-provided third-party API keys (OpenAI, Anthropic, Gemini, OpenRouter) are symmetrically encrypted using AES-256-GCM before database insertion and only decrypted in-memory during review execution.

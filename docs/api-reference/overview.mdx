@@ -1,0 +1,66 @@
+---
+title: 'API Reference Overview'
+sidebarTitle: 'Overview'
+icon: 'code'
+description: 'Complete specification of GoBetter backend REST endpoints'
+---
+
+The GoBetter backend is an Express service structured around modular resource routers mounted at predictable paths.
+
+## Base URL
+
+```bash
+http://localhost:5000
+```
+
+All authenticated browser requests must specify `credentials: 'include'` to allow the browser to exchange the HTTP-only session cookie.
+
+---
+
+## Service Endpoints
+
+<CardGroup cols={3}>
+  <Card title="Authentication" icon="lock" href="/api-reference/auth">
+    Signup, email OTP verification, password resets, active device sessions, and multi-session revocation.
+  </Card>
+  <Card title="Users & Profiles" icon="user" href="/api-reference/users">
+    Profile management, email notification settings, and permanent account deletion.
+  </Card>
+  <Card title="Pull Requests" icon="code-pull-request" href="/api-reference/pull-requests">
+    Synchronized pull request queries, title search, review status filtering, and chat summaries.
+  </Card>
+  <Card title="Reviews" icon="magnifying-glass-chart" href="/api-reference/reviews">
+    Detailed review findings, confidence scores, overview dashboard metrics, and re-review triggers.
+  </Card>
+  <Card title="BYOK & Keys" icon="key" href="/api-reference/byok">
+    Encrypted third-party API keys (OpenAI, Anthropic, OpenRouter), custom gateways, and model probing.
+  </Card>
+  <Card title="AI & Chat" icon="messages" href="/api-reference/conversation">
+    Chunked NDJSON streaming chat, repository tool calls (getDiff), thread history, and user feedback.
+  </Card>
+  <Card title="Workspace Settings" icon="sliders" href="/api-reference/workspace">
+    Default review models per mode (Quick, Focused, Deep Dive) and custom prompt configurations.
+  </Card>
+  <Card title="Usage & Quotas" icon="chart-pie" href="/api-reference/usage">
+    Token expenditure accounting and monitoring against platform free allowances.
+  </Card>
+  <Card title="GitHub Webhook" icon="webhook" href="/api-reference/webhook">
+    Webhook ingestion for pull request events, database synchronization, and queue dispatching.
+  </Card>
+</CardGroup>
+
+---
+
+## Route Summary
+
+| Router Prefix | Code Source | Primary Responsibility | Auth Required |
+| :--- | :--- | :--- | :--- |
+| `/auth` | [`routes/auth.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/auth.routes.ts) | Registration, sessions, OTP verification, password recovery | Mixed |
+| `/users` | [`routes/users.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/users.routes.ts) | Profile updates, email notification toggles, account teardown | Yes |
+| `/pull-request` | [`routes/pullRequest.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/pullRequest.routes.ts) | Synchronized repository PR listings, filters, cursor pagination | Yes |
+| `/review` | [`routes/review.route.ts`](file:///d:/hono-rabbit/backend/src/routes/review.route.ts) | Review findings retrieval, score aggregation, manual re-reviews | Yes |
+| `/byok` | [`routes/byok.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/byok.routes.ts) | Encrypted API key registration, provider catalogs, custom endpoints | Yes |
+| `/conversation` | [`routes/ai.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/ai.routes.ts) | Real-time NDJSON streaming, tool execution, chat threads | Yes |
+| `/workspace` | [`routes/workspace.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/workspace.routes.ts) | Workspace settings, prompt overrides, review presets | Yes |
+| `/usage` | [`routes/usage.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/usage.routes.ts) | Spend tracking and platform free allowance limit checking | Yes |
+| `/webhook` | [`routes/webHookReciver.routes.ts`](file:///d:/hono-rabbit/backend/src/routes/webHookReciver.routes.ts) | GitHub pull request webhook event receiver and queue handoff | Yes* |

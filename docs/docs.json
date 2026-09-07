@@ -1,0 +1,104 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "sequoia",
+  "name": "GoBetter",
+  "appearance": {
+    "default": "dark"
+  },
+  "colors": {
+    "primary": "#c0f200",
+    "light": "#d8ff43",
+    "dark": "#4d6300"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Get Started",
+        "pages": [
+          "introduction",
+          "quickstart"
+        ]
+      },
+      {
+        "group": "Configuration",
+        "pages": [
+          "config/overview",
+          "config/serverConfiguration",
+          "config/clientConfiguration"
+        ]
+      },
+      {
+        "group": "Architecture & Workflows",
+        "pages": [
+          "architecture/architecture",
+          "technical-guides/queueAndWorkers",
+          "technical-guides/databaseSchema",
+          "technical-guides/schemaToolingAndMigrations"
+        ]
+      },
+      {
+        "group": "AI Engine & Harness",
+        "pages": [
+          "technical-guides/ai-and-harness/agentic-review",
+          "technical-guides/ai-and-harness/harness"
+        ]
+      },
+      {
+        "group": "Engineering Standards",
+        "pages": [
+          "technical-guides/notes/pagination",
+          "technical-guides/openApiContract"
+        ]
+      },
+      {
+        "group": "API Reference",
+        "pages": [
+          "api-reference/overview",
+          "api-reference/auth",
+          "api-reference/users",
+          "api-reference/pull-requests",
+          "api-reference/reviews",
+          "api-reference/byok",
+          "api-reference/conversation",
+          "api-reference/workspace",
+          "api-reference/usage",
+          "api-reference/webhook"
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/assets/logo-light.svg",
+    "dark": "/assets/logo-dark.svg",
+    "href": "https://gobetter.dev"
+  },
+  "background": {
+    "color": {
+      "light": "#ffffff",
+      "dark": "#0f1013"
+    }
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "https://gobetter.dev"
+      },
+      {
+        "label": "GitHub",
+        "href": "https://github.com/dev-hari-prasad/go-better"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Dashboard",
+      "href": "https://gobetter.dev"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/dev-hari-prasad/go-better"
+    }
+  }
+}

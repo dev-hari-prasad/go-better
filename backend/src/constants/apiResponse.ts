@@ -12,7 +12,7 @@ export const API_RESPONSE_MESSAGES = {
 
   // 4xx — Client Errors
   400: "Bad Request",
-  401: "Unauthorized",
+  401: "Missing Authorization Token",
   402: "Payment Required",
   403: "Forbidden",
   404: "Not Found",

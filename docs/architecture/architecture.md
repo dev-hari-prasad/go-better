@@ -1,123 +1,98 @@
-# Architecture
-
-![Architecture diagram](./architecture/architecture.png)
+---
+title: 'Architecture & Ingestion Flow'
+sidebarTitle: 'Architecture'
+icon: 'diagram-project'
+description: 'Webhook ingestion lifecycle, Redis BullMQ queues, and review pipeline'
+---
 
 ## Overview
 
-A concise review pipeline triggered by GitHub pull request webhooks. The Backend accepts webhook events, enqueues work in Redis, runs workers to extract and review PR contents, writes review results back to GitHub, and notifies systems and users. A Database stores acknowledgement records, raw payloads and job state entries.
-
-## Main Components
-
-- **GitHub**: Sends PR webhooks and receives review submissions from the Backend.
-- **Backend**: Webhook receiver and a set of workers/services that sanitize, extract, review, notify, and update state.
-- **Redis broker**: Holds queues for PR info, extracted metadata/contents, review notifications, and a state log used by workers.
-- **Database**: Persists acknowledgement records, the original raw payload, and job state entries.
-
-## Backend workers / services
-
-- `acknowledgeReceipt()`: Persist acknowledgement and return 2xx to GitHub quickly.
-- `sanitizePayload()`: Sanitize incoming webhook payloads and perform signature verification.
-- `extractContentsWorker()`: Extracts diffs, comments, and other resource contents available via GitHub APIs and enqueues metadata and content for downstream workers.
-- `reviewWorker()`: Runs LLM reviews, aggregates findings, and issues a PR review back to GitHub.
-- `notificationService()`: Sends notifications to the dashboard and email based on review outcomes.
-- `stateHandler()`: Coupled with workers to update job state entries in the Redis state log and Database.
-
-## PR flow (high level)
+GoBetter processes GitHub pull request events through a distributed, queue-backed pipeline. The Express backend accepts webhook events, synchronizes pull request states to PostgreSQL, queues background jobs in Redis via BullMQ, and executes LLM-driven architectural reviews with zero nitpick noise.
 
 ```mermaid
 sequenceDiagram
-    participant GH as GitHub
-    participant BE as Backend
-    participant R as Redis
-    participant DB as Database
+    participant GH as GitHub / Client
+    participant BE as Express Backend
+    participant R as Redis (BullMQ)
+    participant W as Review Workers
+    participant DB as PostgreSQL
 
-    GH->>BE: PR Webhook
-    BE-->>GH: 2xx (acknowledgeReceipt)
-    BE->>BE: sanitizePayload() & signature verification
-    BE->>R: push to PR info queue (sanitized payload)
-    R->>BE: extractContentsWorker consumes PR info
-    BE->>R: push PR metadata & extracted contents
-    R->>BE: reviewWorker consumes extracted contents
-    BE->>GH: reviewWorker posts PR review
-    BE->>R: push notification to review notification queue
-    BE->>DB: persist acknowledgement, raw payload, state entries
-    BE->>BE: notificationService sends dashboard/email
-```
-
-## Queues, state log and how they're used
-
-- Redis queues (as shown in the diagram):
-  - **PR info queue**: receives sanitized info about incoming PRs.
-  - **PR metadata & extracted contents queue**: holds diffs, files, and other data produced by the extractor.
-  - **Review notification queue**: carries review notifications for downstream consumers (dashboard, email).
-  - **State log**: append-only entries describing job state transitions; consumed/updated by workers and `stateHandler()`.
-
-- Workers consume from the appropriate queue (one consumer per logical responsibility) and append state updates to the state log as work progresses.
-
-## stateHandler and state transitions
-
-```mermaid
-stateDiagram-v2
-    [*] --> RECEIVED
-    RECEIVED --> SANITIZED: sanitizePayload
-    SANITIZED --> EXTRACTED: extractContentsWorker
-    EXTRACTED --> REVIEWING: reviewWorker
-    REVIEWING --> NOTIFIED: notificationService
-    NOTIFIED --> COMPLETED
-    REVIEWING --> FAILED
-    EXTRACTED --> FAILED
-    FAILED --> DLQ
-```
-
-- `stateHandler()` centralizes updates: workers emit state entries to the state log and `stateHandler()` (or an equivalent process) consolidates and writes authoritative state to the Database.
-
-## Database responsibilities
-
-- Store acknowledgement records and the raw webhook payload sent by GitHub.
-- Persist final job state and any authoritative state transitions needed for UI/observability.
-
-## Important design considerations (from diagram)
-
-- One consumer / two messages — avoid duplicate reviews: ensure a single consumer does not produce two reviews for two messages representing the same PR event.
-- Use `X-GitHub-Delivery` header ID with a short TTL to deduplicate events and avoid re-processing the same webhook payload.
-- Keep shared state-transition rules in one shared place (enum/lib) and import them into each worker so the "who can update what" invariant does not drift.
-- Enforce clear invariants about which worker can update which parts of state.
-- Dead-letter queue (DLQ) should enforce retry limits and backoff to avoid permanently looping jobs.
-- Redis durability matters: if queues represent work you cannot lose, configure Redis persistence appropriately or consider a more durable broker as scale/reliability demands grow.
-
-## Component diagram
-
-```mermaid
-flowchart LR
-    GH["GitHub"]
-    subgraph Backend
-      direction TB
-      ACK["acknowledgeReceipt()"]
-      SAN["sanitizePayload()"]
-      EX["extractContentsWorker()"]
-      REV["reviewWorker()"]
-      NOTIF["notificationService()"]
-      STATE["stateHandler()"]
-    end
-
-    Redis[("Redis broker")]
-    DB[("Database")]
-
-    GH -->|PR Webhook| ACK
-    ACK --> SAN
-    SAN --> Redis
-    Redis --> EX
-    EX --> Redis
-    Redis --> REV
-    REV --> GH
-    REV --> Redis
-    REV --> NOTIF
-    NOTIF --> Redis
-    STATE --> Redis
-    STATE --> DB
-    ACK --> DB
+    GH->>BE: POST /webhook (pull_request)
+    BE->>DB: webhookToDatabase() (sync PR & map user)
+    BE->>R: unprocessedWebhookPayload.add()
+    BE-->>GH: 200 OK
+    R->>W: sanitizePayload.worker
+    W->>R: sanitizedPrPayload.add()
+    R->>W: extractContents.worker (fetch diff, patch, commits)
+    W->>R: extractedPrContent.add()
+    R->>W: agenticReview.worker (LLM analysis)
+    W->>DB: Insert review record & update PR status
 ```
 
 ---
 
-Refer to the [Architecture diagram](./architecture/assets/architecture.excalidraw) for a visual representation of the components and their interactions.
+## Main Components
+
+### 1. Ingestion Layer (`/webhook`)
+- Receives GitHub `pull_request` event payloads.
+- Validates the `x-github-event` header.
+- Upserts the pull request into the `pull_requests` table via [`webhookToDatabase()`](file:///d:/hono-rabbit/backend/src/service/gitHubWebhook.service.ts).
+- Enqueues the raw payload to BullMQ queue `unprocessedWebhookPayload` and immediately returns `200 OK`.
+
+<Note>
+  In the development setup, `/webhook` is mounted under session middleware. Standalone GitHub App deployments will utilize an HMAC secret signature verification middleware (`X-Hub-Signature-256`).
+</Note>
+
+---
+
+## BullMQ Queue Pipeline & Workers
+
+The processing pipeline is partitioned across dedicated Redis queues in [`backend/src/config/queue.ts`](file:///d:/hono-rabbit/backend/src/config/queue.ts):
+
+```mermaid
+flowchart LR
+    A[POST /webhook] --> B[unprocessedWebhookPayload]
+    B --> C[sanitizePayload.worker]
+    C --> D[sanitizedPrPayload]
+    D --> E[extractContents.worker]
+    E --> F[extractedPrContent]
+    F --> G[agenticReview.worker]
+    G --> H[(PostgreSQL review)]
+    
+    C -. 3 Failures .-> DLQ[deadLetter]
+    E -. 3 Failures .-> DLQ
+    G -. 3 Failures .-> DLQ
+```
+
+### Worker Responsibilities
+
+1. **`sanitizePayload.worker.ts`**:
+   - Consumes from `unprocessedWebhookPayload`.
+   - Strips massive GitHub webhook JSON objects down to essential metadata: PR title, body, author, URLs (`diff`, `patch`, `issue`, `comments`, `commits`), branches, and changed file metrics.
+   - Pushes clean payload to `sanitizedPrPayload`.
+
+2. **`extractContents.worker.ts`**:
+   - Consumes from `sanitizedPrPayload`.
+   - Concurrently fetches resource URLs (`patch`, `issue`, `comments`, `commits`, `review_comments`).
+   - Assembles full patch context and pushes to `extractedPrContent`.
+
+3. **`agenticReview.worker.ts`**:
+   - Consumes from `extractedPrContent`.
+   - Evaluates whether the user qualifies for the complimentary platform tier or loads decrypted BYOK provider credentials via [`checkByok()`](file:///d:/hono-rabbit/backend/src/service/ai.service.ts).
+   - Prompts the LLM using `CODE_REVIEW_SYSTEM_PROMPT` and `REVIEW_MODES.DEEP_DIVE`.
+   - Parses the structured JSON output with [`parseReview()`](file:///d:/hono-rabbit/backend/src/utils/parseReview.ts).
+   - Persists the completed review, summary, risk rating, and commit SHA into the `review` table and marks `pull_requests.reviewStatus = 'completed'`.
+
+4. **`cleanSessions.ts`**:
+   - Background interval worker running every 15 days to purge expired authentication records from the `sessions` table.
+
+---
+
+## Review Output & Presentation
+
+Review findings are stored in PostgreSQL (`rawReviewJSON` in `review` table) and rendered in real-time in the GoBetter web dashboard:
+- **Quality Score**: Pre-computed 0–100 score based on agent confidence and finding severities.
+- **Categorized Findings**: Anchored to specific files and line numbers with concrete failure scenarios and minimal fixes.
+- **Agentic Fix Prompt**: Markdown instructions that can be copied directly into coding agents (Cursor, Windsurf, Claude Code) to remediate critical issues.
+
+Posting comments directly to GitHub PR threads is scheduled on the active development roadmap.

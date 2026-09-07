@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { AlertTriangle, Check, ShieldAlert, Zap, Lock, Terminal, Activity, MessageSquare } from 'lucide-react';
+import { AlertTriangle, Check, ShieldAlert, ShieldCheck, Zap, Lock, Terminal, Activity, MessageSquare } from 'lucide-react';
 
 const METRICS_LIST = [
   'Onboarded 5,000 engineers today',
@@ -25,14 +25,24 @@ export const WhyChooseSection: React.FC = () => {
   }, []);
 
   return (
-    <div className="w-full my-12 animate-apple-fade select-none">
+    <div className="w-full mt-14 mb-14 md:mt-18 md:mb-18 animate-apple-fade select-none">
       {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight mb-2">
-          Why choose GoBetter AI
+      <div className="text-center mb-12 md:mb-14">
+        <h2
+          className="text-3xl sm:text-4xl md:text-5xl font-medium text-white tracking-tight leading-[1.14] mb-4"
+          style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, letterSpacing: '-0.035em' }}
+        >
+          Why choose <span className="text-[#c0f200]">GoBetter AI</span>
         </h2>
-        <p className="text-sm md:text-base text-zinc-400 font-sans max-w-xl mx-auto">
-          Everything needed to automate + secure your pull requests, codebases & developer teams
+        <p
+          className="text-sm sm:text-base md:text-[17px] font-sans max-w-xl mx-auto leading-relaxed text-balance"
+          style={{
+            fontFamily: "'Manrope', sans-serif",
+            fontWeight: 400,
+            color: 'rgba(255, 255, 255, 0.72)',
+          }}
+        >
+          Everything needed to automate and secure your pull requests, codebases, and engineering teams.
         </p>
       </div>
 
@@ -65,9 +75,9 @@ export const WhyChooseSection: React.FC = () => {
 
           {/* Main Title */}
           <div className="relative z-10 text-center my-6">
-            <h3 className="text-3xl md:text-4xl font-extrabold text-white tracking-tight leading-tight">
+            <h3 className="text-3xl md:text-4xl font-medium text-white tracking-tight leading-tight" style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, letterSpacing: '-0.02em' }}>
               Fighting code reviews with <br />
-              <span className="text-rose-400 font-sans italic font-bold">"manual chaos"</span>
+              <span className="text-rose-400 font-sans italic font-normal">"manual chaos"</span>
             </h3>
           </div>
 
@@ -108,33 +118,44 @@ export const WhyChooseSection: React.FC = () => {
           </div>
         </div>
 
-        {/* ── RIGHT CARD: Shipping with GoBetter AI (Vibrant Solution Card) ── */}
-        <div className="relative min-h-[420px] rounded-3xl p-8 bg-[#c0f200] text-black overflow-hidden flex flex-col justify-between shadow-2xl group transition-transform hover:scale-[1.01]">
-          {/* Subtle Background Pattern */}
-          <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]" />
+        {/* ── RIGHT CARD: Shipping with GoBetter AI (Clean Minimal Solution Card) ── */}
+        <div className="relative min-h-[420px] rounded-3xl p-8 bg-[#090e06] border border-[#c0f200]/25 overflow-hidden flex flex-col justify-between shadow-2xl group transition-all duration-300 hover:border-[#c0f200]/40">
+          {/* Subtle Ambient Radial Glow */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              background: 'radial-gradient(ellipse 70% 60% at 50% 45%, rgba(192, 242, 0, 0.12) 0%, transparent 75%)',
+            }}
+          />
 
           {/* Top Logo / Icon */}
           <div className="relative z-10 flex justify-end">
-            <div className="p-2.5 rounded-full bg-black/10 text-black border border-black/10">
+            <div className="p-2.5 rounded-full bg-[#c0f200]/10 text-[#c0f200] border border-[#c0f200]/20">
               <Zap className="w-5 h-5 fill-current" />
             </div>
           </div>
 
-          {/* Main Title */}
+          {/* Main Title & Clean Subtitle */}
           <div className="relative z-10 text-center my-auto py-8">
-            <h3 className="text-4xl md:text-5xl font-black text-black tracking-tight leading-tight">
+            <h3
+              className="text-4xl md:text-5xl font-medium text-white tracking-tight leading-tight mb-3"
+              style={{ fontFamily: "'Manrope', sans-serif", fontWeight: 500, letterSpacing: '-0.03em' }}
+            >
               Shipping with <br />
-              GoBetter AI
+              <span className="text-[#c0f200]">GoBetter AI</span>
             </h3>
+            <p className="text-sm md:text-base text-zinc-400 font-sans max-w-sm mx-auto leading-relaxed">
+              Automated PR reviews, instant patches, and zero developer bottlenecks.
+            </p>
           </div>
 
-          {/* Dynamic Animated Metric Pill at Bottom (Matching the Screenshots!) */}
-          <div className="relative z-10 pt-4 border-t border-black/10 flex justify-center">
-            <div className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-black/10 border border-black/15 text-black font-semibold text-xs md:text-sm backdrop-blur-sm shadow-md">
-              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-black text-[#c0f200]">
+          {/* Dynamic Animated Metric Pill at Bottom */}
+          <div className="relative z-10 pt-4 border-t border-white/10 flex justify-center">
+            <div className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-[#10180c]/90 border border-[#c0f200]/25 text-zinc-200 font-semibold text-xs md:text-sm backdrop-blur-md shadow-lg">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#c0f200] text-black">
                 <Check className="w-3.5 h-3.5 stroke-[3]" />
               </div>
-              <span className={`transition-opacity duration-300 ${fade ? 'opacity-100' : 'opacity-0'}`}>
+              <span className={`transition-opacity duration-300 font-mono text-[#c0f200] ${fade ? 'opacity-100' : 'opacity-0'}`}>
                 {METRICS_LIST[metricIndex]}
               </span>
             </div>
@@ -148,6 +169,10 @@ export const WhyChooseSection: React.FC = () => {
         @keyframes pulseWave {
           0%, 100% { transform: scaleY(0.4); opacity: 0.3; }
           50% { transform: scaleY(1.1); opacity: 0.9; }
+        }
+        @keyframes pulseWaveHarmonic {
+          0%, 100% { transform: scaleY(0.5); opacity: 0.35; }
+          50% { transform: scaleY(1.0); opacity: 0.85; }
         }
         @keyframes float-slow {
           0%, 100% { transform: translateY(0px); }

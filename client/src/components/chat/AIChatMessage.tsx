@@ -1,16 +1,47 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-typescript';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-markdown';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-sql';
+import 'prismjs/components/prism-go';
+import 'prismjs/components/prism-rust';
+import 'prismjs/components/prism-yaml';
+import 'prismjs/components/prism-docker';
 import { 
   ClipboardDocumentIcon,
   CheckIcon,
-  ArrowPathIcon,
-  HandThumbUpIcon,
-  HandThumbDownIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
-import { Bot, Sparkles } from 'lucide-react';
+import { ThumbsUp, ThumbsDown } from '@phosphor-icons/react';
+import { Sparkles, Copy, GitPullRequest, FileCode, FileText, FolderTree, Wrench } from 'lucide-react';
 import { DriveWavefront } from './DriveWavefront';
+import { THINKING_PHRASES } from '../../constants/thinkingPhrases';
+
+export function renderToolIcon(toolName: string) {
+  const name = (toolName || '').toLowerCase();
+  if (name.includes('pr') || name.includes('pullrequest')) {
+    return <GitPullRequest className="w-3.5 h-3.5 text-[#c0f200] shrink-0" />;
+  }
+  if (name.includes('diff')) {
+    return <FileCode className="w-3.5 h-3.5 text-[#c0f200] shrink-0" />;
+  }
+  if (name.includes('file')) {
+    return <FileText className="w-3.5 h-3.5 text-[#c0f200] shrink-0" />;
+  }
+  if (name.includes('tree') || name.includes('folder') || name.includes('repo') || name.includes('dir')) {
+    return <FolderTree className="w-3.5 h-3.5 text-[#c0f200] shrink-0" />;
+  }
+  return <Wrench className="w-3.5 h-3.5 text-[#c0f200] shrink-0" />;
+}
 
 export interface MessageSource {
   id: string;
@@ -18,8 +49,18 @@ export interface MessageSource {
   icon?: React.ReactNode;
 }
 
+export interface ToolCallItem {
+  toolCallId: string;
+  toolName: string;
+  status: 'calling' | 'result';
+  input?: any;
+  output?: any;
+  label: string;
+}
+
 export interface ChatMessage {
   id: string;
+  dbMessageId?: string;
   sender: 'user' | 'ai';
   text: string;
   timestamp: string;
@@ -29,6 +70,13 @@ export interface ChatMessage {
   title?: string;
   sources?: MessageSource[];
   followUps?: string[];
+  thumbsFeedback?: 'postive' | 'negitive' | null;
+  toolCalls?: ToolCallItem[];
+  llmModel?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  reasoningTokens?: number;
+  cachedTokens?: number;
 }
 
 interface AIChatMessageProps {
@@ -36,42 +84,108 @@ interface AIChatMessageProps {
   onCopySnippet: (id: string, code: string) => void;
   copiedCodeId: string | null;
   onFollowUpClick?: (text: string) => void;
+  onFeedback?: (messageId: string, feedback: 'postive' | 'negitive' | null) => void;
+  isLatest?: boolean;
 }
+
+const MarkdownCodeBlock: React.FC<{ language?: string; value: string }> = ({
+  language,
+  value,
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const highlightedHtml = React.useMemo(() => {
+    const lang = language ? language.toLowerCase() : '';
+    const langMap: Record<string, string> = {
+      js: 'javascript',
+      ts: 'typescript',
+      jsx: 'jsx',
+      tsx: 'tsx',
+      py: 'python',
+      sh: 'bash',
+      shell: 'bash',
+      yml: 'yaml',
+    };
+    const mappedLang = langMap[lang] || lang;
+    const grammar = Prism.languages[mappedLang] || Prism.languages.javascript;
+    try {
+      if (grammar) {
+        return Prism.highlight(value, grammar, mappedLang);
+      }
+    } catch {
+      // fallback
+    }
+    return null;
+  }, [language, value]);
+
+  return (
+    <div className="my-3.5 rounded-lg border border-[#232530] overflow-hidden bg-[#0d1117] text-left">
+      <div className="flex items-center justify-between px-3.5 py-1.5 bg-[#161b22] border-b border-[#232530] text-[12px] font-mono text-zinc-400 select-none">
+        <span className="text-zinc-300 font-medium">{language || 'code'}</span>
+        <button
+          onClick={handleCopy}
+          className="flex items-center gap-1.5 text-[12px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+        >
+          {copied ? (
+            <>
+              <CheckIcon className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400 font-sans font-medium">Copied!</span>
+            </>
+          ) : (
+            <>
+              <ClipboardDocumentIcon className="w-3.5 h-3.5" />
+              <span className="font-sans font-medium">Copy</span>
+            </>
+          )}
+        </button>
+      </div>
+      <pre className="p-4 overflow-x-auto text-[13.5px] font-mono leading-relaxed text-[#e6edf3] bg-[#0d1117] m-0">
+        {highlightedHtml ? (
+          <code
+            className={`language-${language || 'text'}`}
+            dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+          />
+        ) : (
+          <code>{value}</code>
+        )}
+      </pre>
+    </div>
+  );
+};
 
 export const AIChatMessage: React.FC<AIChatMessageProps> = ({
   message,
   onCopySnippet,
   copiedCodeId,
   onFollowUpClick,
+  onFeedback,
+  isLatest = false,
 }) => {
   const [copied, setCopied] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
-  const words = useMemo(() => message.text.split(' '), [message.text]);
-  const [displayedWordCount, setDisplayedWordCount] = useState<number>(() => message.isStreaming ? 0 : words.length);
-  const [isStreamingActive, setIsStreamingActive] = useState<boolean>(() => !!message.isStreaming);
+  const [phraseIndex, setPhraseIndex] = useState(() =>
+    Math.floor(Math.random() * THINKING_PHRASES.length)
+  );
+
+  const isStreamingActive: boolean = !!message.isStreaming;
+  const displayedText = message.text || '';
 
   useEffect(() => {
-    if (!message.isStreaming) {
-      setDisplayedWordCount(words.length);
-      setIsStreamingActive(false);
-      return;
-    }
-
-    setDisplayedWordCount(0);
-    setIsStreamingActive(true);
-
-    let currentIndex = 0;
+    if (!isStreamingActive) return;
     const interval = setInterval(() => {
-      currentIndex++;
-      setDisplayedWordCount(currentIndex);
-      if (currentIndex >= words.length) {
-        clearInterval(interval);
-        setIsStreamingActive(false);
-      }
-    }, 45); // 45ms per word, matching the Advanced Components StreamingText speed
-
+      setPhraseIndex((prev) => {
+        const step = Math.floor(Math.random() * (THINKING_PHRASES.length - 1)) + 1;
+        return (prev + step) % THINKING_PHRASES.length;
+      });
+    }, 2400);
     return () => clearInterval(interval);
-  }, [message.isStreaming, message.text, words.length]);
+  }, [isStreamingActive]);
 
   const handleCopyMessage = () => {
     navigator.clipboard.writeText(message.text);
@@ -81,55 +195,310 @@ export const AIChatMessage: React.FC<AIChatMessageProps> = ({
 
   const done = !isStreamingActive;
 
+  const hasStartedResponding = Boolean(displayedText && displayedText.length > 0);
+  const toolCalls = message.toolCalls || [];
+  const hasToolCalls = toolCalls.length > 0;
+  // Initial thinking: streaming, no text received yet, and no tool calls received yet
+  const isInitialThinking = isStreamingActive && !hasStartedResponding && !hasToolCalls;
+
   return (
     <div className="flex flex-col max-w-3xl w-full text-zinc-200 animate-apple-fade group relative">
-      {/* Header Area */}
-      <div className="flex items-center gap-3 mb-3">
-        {isStreamingActive ? (
-          <div className="w-6 h-6 flex items-center justify-center shrink-0 rounded-full border border-transparent">
+      <style>{`
+        @keyframes shimmerLaser {
+          0% { background-position: 250% 0; }
+          100% { background-position: -250% 0; }
+        }
+        .text-shimmer-laser {
+          background: linear-gradient(
+            90deg,
+            #64748b 0%,
+            #94a3b8 15%,
+            #c0f200 40%,
+            #ffffff 50%,
+            #c0f200 60%,
+            #94a3b8 85%,
+            #64748b 100%
+          );
+          background-size: 250% 100%;
+          color: transparent;
+          -webkit-background-clip: text;
+          background-clip: text;
+          animation: shimmerLaser 2.6s linear infinite;
+          font-weight: 600;
+          display: inline-block;
+        }
+        @keyframes slotSwitch {
+          0% {
+            opacity: 0;
+            transform: translateY(14px);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(-1px);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .slot-switch {
+          display: inline-flex;
+          align-items: center;
+          animation: slotSwitch 0.16s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+
+        /* GitHub Dark Syntax Highlighting */
+        .token.comment,
+        .token.prolog,
+        .token.doctype,
+        .token.cdata {
+          color: #8b949e;
+          font-style: italic;
+        }
+        .token.punctuation {
+          color: #c9d1d9;
+        }
+        .token.property,
+        .token.tag,
+        .token.boolean,
+        .token.number,
+        .token.constant,
+        .token.symbol,
+        .token.deleted {
+          color: #79c0ff;
+        }
+        .token.selector,
+        .token.attr-name,
+        .token.string,
+        .token.char,
+        .token.builtin,
+        .token.inserted {
+          color: #a5d6ff;
+        }
+        .token.operator,
+        .token.entity,
+        .token.url,
+        .language-css .token.string,
+        .style .token.string {
+          color: #79c0ff;
+        }
+        .token.atrule,
+        .token.attr-value,
+        .token.keyword {
+          color: #ff7b72;
+          font-weight: 500;
+        }
+        .token.function,
+        .token.class-name {
+          color: #d2a8ff;
+        }
+        .token.regex,
+        .token.important,
+        .token.variable {
+          color: #ffa657;
+        }
+      `}</style>
+
+      {/* 1. Initial Waiting / Thinking State (Dot grid + Shimmering text only in the very beginning) */}
+      {isInitialThinking && (
+        <div className="flex items-center gap-2.5 mb-3 min-h-[22px]">
+          <div className="w-4 h-4 flex items-center justify-center shrink-0">
             <DriveWavefront />
           </div>
-        ) : (
-          <div className="w-6 h-6 rounded-md bg-[#16171d] border border-[#232530] flex items-center justify-center shrink-0 shadow-sm">
-            <Bot className="w-3.5 h-3.5 text-[#c0f200]" />
-          </div>
-        )}
-        {message.title && (
-          <h3 className="text-sm font-semibold text-zinc-100 tracking-tight flex items-center gap-2">
-            <span>{message.title}</span>
-            {isStreamingActive && (
-              <span className="text-[10px] font-mono font-medium px-1.5 py-0.5 rounded bg-[#c0f200]/10 text-[#c0f200] border border-[#c0f200]/30 animate-pulse">
-                Streaming...
+          {/* Ticker Switching Box */}
+          <div className="h-5 overflow-hidden flex items-center relative">
+            <div key={phraseIndex} className="slot-switch h-full items-center">
+              <span className="text-shimmer-laser text-[13px] font-mono tracking-wide select-none">
+                {THINKING_PHRASES[phraseIndex]}
               </span>
-            )}
-          </h3>
-        )}
-      </div>
+            </div>
+          </div>
+          {message.title && (
+            <span className="text-xs text-zinc-500 font-normal truncate max-w-[200px]">
+              • {message.title}
+            </span>
+          )}
+        </div>
+      )}
 
-      {/* Message Body with Stream-In Blur-To-Focus Animation */}
-      <div className="text-[14px] leading-relaxed text-zinc-200">
-        {isStreamingActive ? (
-          <div className="font-sans whitespace-pre-wrap">
-            {words.slice(0, displayedWordCount).map((word, i) => (
-              <span
-                key={i}
-                className="inline [will-change:filter,opacity]"
-                style={{ animation: 'stream-in 420ms cubic-bezier(0.22,0.61,0.25,1) both' }}
-              >
-                {word}{' '}
-              </span>
-            ))}
-            <span
-              className="ml-0.5 inline-block h-3.5 w-1 translate-y-0.5 rounded-full bg-[#c0f200]"
-              style={{ animation: 'fade-in 150ms ease-out both' }}
-            />
-          </div>
-        ) : (
-          <div className="prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-pre:bg-[#0d1117] prose-pre:border prose-pre:border-[#232530]">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {message.text}
+      {/* 2. Tool Calls Section */}
+      {hasToolCalls && (
+        <div className="mb-2">
+          {/* When actively executing tools and AI hasn't started responding with text yet */}
+          {!hasStartedResponding && isStreamingActive ? (
+            <div className="space-y-1.5 mb-2">
+              {toolCalls.map((tool) =>
+                tool.status === 'calling' ? (
+                  <div key={tool.toolCallId} className="flex items-center gap-2 min-h-[22px] animate-apple-fade">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#c0f200] animate-ping shrink-0" />
+                    <span className="text-shimmer-laser text-[13px] font-mono tracking-wide select-none">
+                      {tool.label}
+                    </span>
+                  </div>
+                ) : (
+                  <div
+                    key={tool.toolCallId}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#16171d] border border-[#232530] rounded-lg text-xs font-mono text-zinc-300 mr-2 select-none animate-apple-fade"
+                  >
+                    {renderToolIcon(tool.toolName)}
+                    <span>{tool.label}</span>
+                  </div>
+                )
+              )}
+            </div>
+          ) : (
+            /* Once AI starts responding or is done, render clean completed tool badges */
+            <div className="flex flex-wrap gap-2 mb-2.5">
+              {toolCalls.map((tool) => (
+                <div
+                  key={tool.toolCallId}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#16171d] border border-[#232530] rounded-lg text-xs font-mono text-zinc-300 select-none animate-apple-fade"
+                >
+                  {renderToolIcon(tool.toolName)}
+                  <span>{tool.label}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. Static Title (When complete and title exists) */}
+      {!isStreamingActive && message.title && (
+        <div className="flex items-center gap-2 mb-2.5">
+          <h3 className="text-base font-semibold text-zinc-100 tracking-tight">
+            {message.title}
+          </h3>
+        </div>
+      )}
+
+      {/* Message Body (renders markdown live while streaming and once complete) */}
+      <div className="text-[15px] sm:text-[15.5px] leading-[1.75] text-zinc-200">
+        {displayedText ? (
+          <div className="prose prose-invert prose-base max-w-none prose-code:before:content-none prose-code:after:content-none">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                pre({ children }) {
+                  return <>{children}</>;
+                },
+                code({ inline, className, children, ...props }: any) {
+                  const match = /language-(\w+)/.exec(className || '');
+                  const codeText = String(children).replace(/\n$/, '');
+                  if (!inline && (match || codeText.includes('\n'))) {
+                    return (
+                      <MarkdownCodeBlock
+                        language={match ? match[1] : undefined}
+                        value={codeText}
+                      />
+                    );
+                  }
+                  return (
+                    <code
+                      className="bg-[#161b22] text-[#e6edf3] border border-[#30363d] px-1.5 py-0.5 rounded-[5px] font-mono text-[13.5px] font-normal before:content-none after:content-none"
+                      {...props}
+                    >
+                      {children}
+                    </code>
+                  );
+                },
+                strong({ children }) {
+                  return <strong className="font-semibold text-zinc-100">{children}</strong>;
+                },
+                em({ children }) {
+                  return <em className="italic text-zinc-200">{children}</em>;
+                },
+                h1({ children }) {
+                  return <h1 className="text-xl font-bold text-zinc-100 mt-3.5 mb-2 first:mt-0">{children}</h1>;
+                },
+                h2({ children }) {
+                  return <h2 className="text-lg font-bold text-zinc-100 mt-3 mb-1.5 first:mt-0">{children}</h2>;
+                },
+                h3({ children }) {
+                  return <h3 className="text-base font-semibold text-zinc-100 mt-2.5 mb-1 first:mt-0">{children}</h3>;
+                },
+                hr() {
+                  return <hr className="my-3 border-0 border-t border-white/[0.08]" />;
+                },
+                p({ children }) {
+                  return <p className="mb-2.5 last:mb-0 leading-[1.75] text-[15px] sm:text-[15.5px] text-zinc-200">{children}</p>;
+                },
+                ul({ children }) {
+                  return <ul className="list-disc list-outside pl-5 space-y-1.5 mb-2.5 text-[15px] sm:text-[15.5px] text-zinc-200">{children}</ul>;
+                },
+                ol({ children }) {
+                  return <ol className="list-decimal list-outside pl-5 space-y-1.5 mb-2.5 text-[15px] sm:text-[15.5px] text-zinc-200">{children}</ol>;
+                },
+                li({ children }) {
+                  return <li className="leading-[1.75] text-[15px] sm:text-[15.5px] text-zinc-200">{children}</li>;
+                },
+                table({ children }) {
+                  return (
+                    <div className="my-4 overflow-x-auto rounded-lg border border-[#30363d] bg-[#0d1117]">
+                      <table className="w-full text-left text-[14px] border-collapse font-sans">
+                        {children}
+                      </table>
+                    </div>
+                  );
+                },
+                thead({ children }) {
+                  return <thead className="bg-[#161b22] text-zinc-200 border-b border-[#30363d] font-semibold">{children}</thead>;
+                },
+                tbody({ children }) {
+                  return <tbody className="divide-y divide-[#21262d]">{children}</tbody>;
+                },
+                tr({ children }) {
+                  return <tr className="hover:bg-[#161b22]/50 transition-colors">{children}</tr>;
+                },
+                th({ children }) {
+                  return <th className="px-4 py-2.5 font-medium text-zinc-100">{children}</th>;
+                },
+                td({ children }) {
+                  return <td className="px-4 py-2.5 text-zinc-200">{children}</td>;
+                },
+                blockquote({ children }) {
+                  return (
+                    <blockquote className="my-3.5 pl-4 border-l-2 border-zinc-600 bg-[#161b22]/50 py-2 pr-3.5 rounded-r-md text-[14.5px] leading-relaxed text-zinc-300 italic">
+                      {children}
+                    </blockquote>
+                  );
+                },
+                a({ href, children }) {
+                  return (
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#58a6ff] hover:underline underline-offset-2 font-medium"
+                    >
+                      {children}
+                    </a>
+                  );
+                },
+                input({ type, checked, ...props }: any) {
+                  if (type === 'checkbox') {
+                    return (
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        readOnly
+                        className="mr-2.5 rounded border-[#30363d] bg-[#161b22] text-[#c0f200] accent-[#c0f200] focus:ring-0 cursor-default"
+                        {...props}
+                      />
+                    );
+                  }
+                  return <input type={type} checked={checked} {...props} />;
+                },
+              }}
+            >
+              {displayedText}
             </ReactMarkdown>
           </div>
+        ) : null}
+        {isStreamingActive && displayedText.length > 0 && (
+          <span
+            className="mt-1 inline-block h-3.5 w-1 rounded-full bg-[#c0f200] animate-pulse"
+          />
         )}
 
         {/* Inline Source Pill */}
@@ -169,46 +538,76 @@ export const AIChatMessage: React.FC<AIChatMessageProps> = ({
         </div>
       )}
 
-      {/* Action Bar (Smoothly fades in once streaming finishes) */}
+      {/* Action Bar (Only shows when hovered or on the latest AI message, maintaining reserved height to prevent jitter) */}
       <div 
-        className="flex items-center gap-1 mt-4 text-zinc-500 transition-opacity duration-300"
-        style={{ opacity: done ? 1 : 0, pointerEvents: done ? 'auto' : 'none' }}
+        className={`flex items-center gap-1 mt-1.5 min-h-[26px] text-zinc-500 transition-opacity duration-150 ${
+          isLatest || sourcesOpen || message.thumbsFeedback
+            ? 'opacity-100'
+            : 'opacity-0 group-hover:opacity-100'
+        }`}
+        style={{ pointerEvents: done ? 'auto' : 'none' }}
       >
+        {/* Copy Message Button */}
         <button 
           onClick={handleCopyMessage} 
           className="group/btn relative p-1.5 hover:bg-[#21262d] hover:text-zinc-300 rounded-md transition-colors cursor-pointer"
-          title="Copy message"
+          aria-label="Copy message"
         >
-          {copied ? <CheckIcon className="w-4 h-4 text-emerald-400" /> : <ClipboardDocumentIcon className="w-4 h-4" />}
+          {copied ? <CheckIcon className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
           <span className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/btn:opacity-100 transition-opacity bg-[#16171d] border border-[#30363d] text-[10px] font-medium text-zinc-200 px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-md z-50">
             {copied ? 'Copied' : 'Copy'}
           </span>
         </button>
-        <button 
-          className="group/btn relative p-1.5 hover:bg-[#21262d] hover:text-zinc-300 rounded-md transition-colors cursor-pointer"
-          title="Regenerate response"
+
+        {/* Thumbs Up (Like) Button */}
+        <button
+          onClick={() => {
+            const targetId = message.dbMessageId || message.id;
+            if (targetId && onFeedback) {
+              const next = message.thumbsFeedback === 'postive' ? null : 'postive';
+              onFeedback(targetId, next);
+            }
+          }}
+          className={`group/btn relative p-1.5 rounded-md transition-colors cursor-pointer hover:bg-[#21262d] ${
+            message.thumbsFeedback === 'postive'
+              ? 'text-zinc-100 bg-[#21262d]'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+          aria-label="Good response"
         >
-          <ArrowPathIcon className="w-4 h-4" />
+          <ThumbsUp 
+            size={14} 
+            weight={message.thumbsFeedback === 'postive' ? "fill" : "regular"} 
+            className={message.thumbsFeedback === 'postive' ? "text-zinc-100" : "text-zinc-400 group-hover/btn:text-zinc-200 transition-colors"} 
+          />
           <span className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/btn:opacity-100 transition-opacity bg-[#16171d] border border-[#30363d] text-[10px] font-medium text-zinc-200 px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-md z-50">
-            Regenerate
+            Good response
           </span>
         </button>
-        <button 
-          className="group/btn relative p-1.5 hover:bg-[#21262d] hover:text-zinc-300 rounded-md transition-colors cursor-pointer"
-          title="Good response"
+
+        {/* Thumbs Down (Dislike) Button */}
+        <button
+          onClick={() => {
+            const targetId = message.dbMessageId || message.id;
+            if (targetId && onFeedback) {
+              const next = message.thumbsFeedback === 'negitive' ? null : 'negitive';
+              onFeedback(targetId, next);
+            }
+          }}
+          className={`group/btn relative p-1.5 rounded-md transition-colors cursor-pointer hover:bg-[#21262d] ${
+            message.thumbsFeedback === 'negitive'
+              ? 'text-zinc-100 bg-[#21262d]'
+              : 'text-zinc-500 hover:text-zinc-300'
+          }`}
+          aria-label="Bad response"
         >
-          <HandThumbUpIcon className="w-4 h-4" />
+          <ThumbsDown 
+            size={14} 
+            weight={message.thumbsFeedback === 'negitive' ? "fill" : "regular"} 
+            className={message.thumbsFeedback === 'negitive' ? "text-zinc-100" : "text-zinc-400 group-hover/btn:text-zinc-200 transition-colors"} 
+          />
           <span className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/btn:opacity-100 transition-opacity bg-[#16171d] border border-[#30363d] text-[10px] font-medium text-zinc-200 px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-md z-50">
-            Helpful
-          </span>
-        </button>
-        <button 
-          className="group/btn relative p-1.5 hover:bg-[#21262d] hover:text-zinc-300 rounded-md transition-colors cursor-pointer"
-          title="Poor response"
-        >
-          <HandThumbDownIcon className="w-4 h-4" />
-          <span className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/btn:opacity-100 transition-opacity bg-[#16171d] border border-[#30363d] text-[10px] font-medium text-zinc-200 px-2 py-1 rounded-md whitespace-nowrap pointer-events-none shadow-md z-50">
-            Not helpful
+            Bad response
           </span>
         </button>
 
@@ -230,6 +629,25 @@ export const AIChatMessage: React.FC<AIChatMessageProps> = ({
             <span className="text-xs font-medium text-zinc-400">
               {message.sources.length} sources
             </span>
+          </div>
+        )}
+
+        {/* Token Usage Badge */}
+        {((message.inputTokens != null && message.inputTokens > 0) || (message.outputTokens != null && message.outputTokens > 0)) && (
+          <div className="flex items-center gap-1.5 ml-auto text-[11px] font-mono text-zinc-500 bg-[#161b22] px-2 py-0.5 rounded border border-[#30363d]/60 select-none">
+            {message.llmModel && (
+              <span className="text-zinc-400 font-sans truncate max-w-[110px]" title={message.llmModel}>
+                {message.llmModel.split('/').pop()}
+              </span>
+            )}
+            {message.inputTokens != null && message.outputTokens != null && (
+              <>
+                <span className="text-zinc-600">•</span>
+                <span title={`Prompt: ${message.inputTokens.toLocaleString()} | Completion: ${message.outputTokens.toLocaleString()}${message.reasoningTokens ? ` | Reasoning: ${message.reasoningTokens.toLocaleString()}` : ''}${message.cachedTokens ? ` | Cached: ${message.cachedTokens.toLocaleString()}` : ''}`}>
+                  {(message.inputTokens + message.outputTokens).toLocaleString()} tok
+                </span>
+              </>
+            )}
           </div>
         )}
       </div>

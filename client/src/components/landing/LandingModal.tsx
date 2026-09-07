@@ -252,10 +252,10 @@ export const LandingModal: React.FC<LandingModalProps> = ({
                 {/* Primary Action Button */}
                 <button
                   onClick={() => handleAuthClick('signup')}
-                  className="group inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-full bg-[#c0f200] hover:bg-[#d4ff1a] text-black font-semibold text-sm md:text-base font-sans tracking-tight hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-lg hover:shadow-xl"
+                  className="group inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full bg-[#c0f200] hover:bg-[#d4ff1a] text-black font-semibold text-xs md:text-sm font-sans tracking-tight hover:scale-[1.03] active:scale-[0.98] transition-all duration-200 cursor-pointer shadow-lg hover:shadow-xl"
                 >
                   <span>Start reviewing for free</span>
-                  <ArrowRight size={17} weight="bold" className="transition-transform duration-200 group-hover:translate-x-1" />
+                  <ArrowRight size={15} weight="bold" className="transition-transform duration-200 group-hover:translate-x-1" />
                 </button>
 
                 {/* Friction-reducer & Social Proof Micro-row */}

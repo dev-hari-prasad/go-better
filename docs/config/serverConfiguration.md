@@ -5,6 +5,15 @@ icon: 'server'
 description: 'Backend environment variables, databases, Redis queues, and security parameters'
 ---
 
+<Tip>
+**Quick Setup with [`copy-env`](https://www.npmjs.com/package/copy-env)**  
+Scaffold your `backend/.env` from the example template in one command:
+```bash
+npx copy-env
+```
+This reads `copy-env-config.json` and copies `src/.env.example` → `src/.env`, so you only need to fill in your secrets.
+</Tip>
+
 ---
 
 ## Configuration Overview Table

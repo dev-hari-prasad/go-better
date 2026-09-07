@@ -5,6 +5,15 @@ icon: 'desktop'
 description: 'Frontend environment variables, local storage toggles, and runtime feature flags'
 ---
 
+<Tip>
+**Quick Setup with [`copy-env`](https://www.npmjs.com/package/copy-env)**  
+Scaffold your `client/.env` from the example template in one command:
+```bash
+npx copy-env
+```
+This copies `.env.example` → `.env` so you only need to fill in your values.
+</Tip>
+
 ---
 
 ## Configuration Overview Table

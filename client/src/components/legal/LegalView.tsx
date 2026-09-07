@@ -541,7 +541,17 @@ export const LegalView: React.FC<LegalViewProps> = ({
             </div>
 
             <p className="text-zinc-300 pt-2 leading-relaxed">
-              We strive to locate our services in the US itself, but some subprocessors might process your request from elsewhere which is not in our control, such as dynamic LLM routers.
+              We strive to locate our services in the US itself, but some subprocessors might process your request from elsewhere which is not in our control, such as dynamic LLM routers. 
+
+              <br/>
+              <br/>
+
+              This may, in some cases, involve data being processed or hosted in countries where regulatory or governmental requirements regarding data residency, privacy, or access may differ from those applicable in the United States.
+
+              <br/>
+              <br/>
+
+              If data residency or jurisdictional requirements are important to you, we recommend first trying our self-hosted version, which is available through our public repositories, to evaluate the software in an environment where you retain control over where your data is processed and stored. You may then use our open source self hosted version with only those subprocessors and service providers whose data-processing practices and jurisdictions are acceptable for your requirements.
             </p>
 
             <p className="text-zinc-300 leading-relaxed">

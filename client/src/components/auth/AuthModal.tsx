@@ -22,7 +22,7 @@ import {
   getCurrentSession,
 } from '../../services/authApi';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.gobetter.dev';
 
 export type AuthMode = 'signup' | 'login' | 'forgot-password' | 'reset-password';
 type AuthStep = 'form' | 'otp_verify' | 'forgot_password' | 'verify_forgot_password' | 'reset_password';

@@ -33,7 +33,7 @@ import { HexagonPattern } from '../ui/hexagon-pattern';
 import { GobeAiLogo } from '../ui/GobeAiLogo';
 import { ReviewMarkdown } from '../ui/ReviewMarkdown';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.gobetter.dev';
 
 export interface RepoPRItem {
   id: number | string;

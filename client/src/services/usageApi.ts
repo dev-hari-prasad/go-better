@@ -1,6 +1,6 @@
 import { getAuthUserId } from './pullRequestApi';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.gobetter.dev';
 export const DEFAULT_TEMP_USER_ID = '5c7cc9f9-0306-422d-9970-8d46f6e35fa1';
 
 export interface UsageData {

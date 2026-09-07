@@ -1,6 +1,6 @@
 import { PullRequest, ReviewStatus, DiffFile, DiffLine, AIFinding, FindingSeverity } from '../types/codeReview';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.gobetter.dev';
 const USER_ID_STORAGE_KEY = 'gobe-user-id';
 
 // Shape returned by GET /pull-request/list

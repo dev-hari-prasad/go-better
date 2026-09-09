@@ -251,10 +251,73 @@ export const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('github_auth')) {
+      console.log('[AUTH-CLIENT] Detected github_auth in URL search params:', {
+        github_auth: params.get('github_auth'),
+        message: params.get('message'),
+        session_id: params.get('session_id'),
+        user_id: params.get('user_id'),
+        user_name: params.get('user_name'),
+        user_email: params.get('user_email'),
+      });
+    }
+
+    if (params.get('github_auth') === 'success') {
+      const sessionId = params.get('session_id');
+      const userId = params.get('user_id');
+      const userName = params.get('user_name');
+      const userEmail = params.get('user_email');
+
+      console.log('[AUTH-CLIENT] GitHub auth success received! Saving credentials to localStorage.');
+
+      if (sessionId) {
+        localStorage.setItem('session_id', sessionId);
+      }
+      if (userId) {
+        localStorage.setItem('user_db_id', userId);
+        localStorage.setItem('user_id', userId);
+      }
+      if (userName) {
+        localStorage.setItem('user_profile_name', userName);
+      }
+      if (userEmail) {
+        localStorage.setItem('user_profile_email', userEmail);
+      }
+      localStorage.setItem('user_auth_provider', 'github');
+      localStorage.setItem('last_used_auth_method', 'github');
+      localStorage.setItem('showMarketingPopup', 'false');
+
+      // Close auth modal if open
+      setIsAuthModalOpen(false);
+
+      // Clean search params from URL
+      window.history.replaceState({}, '', window.location.pathname);
+
+      // Dispatch global events to update UI
+      window.dispatchEvent(new Event('user-profile-updated'));
+      window.dispatchEvent(new Event('user-changed'));
+
+      // Also trigger refreshSession in background
+      void getCurrentSession().catch(() => {});
+
+      toast.success('Signed in with GitHub successfully.');
+    } else if (params.get('github_auth') === 'error') {
+      const errorMsg = params.get('message') || 'GitHub authentication could not be completed.';
+      console.error('[AUTH-CLIENT] GitHub authentication error received from server:', errorMsg);
+      window.history.replaceState({}, '', window.location.pathname);
+      toast.error(errorMsg);
+      setAuthModalMode('login');
+      setIsAuthModalOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
     const handleOpenAuthModal = (e: Event) => {
       const customEvent = e as CustomEvent<{ mode?: AuthMode }>;
       const mode = customEvent.detail?.mode || 'signup';
       setAuthModalMode(mode);
+      setIsLandingModalOpen(false);
       setIsAuthModalOpen(true);
       if (window.location.pathname !== `/${mode}`) {
         window.history.pushState({ auth: mode }, '', `/${mode}`);
@@ -751,47 +814,6 @@ export const App: React.FC = () => {
 
         {/* View Router */}
         <main className="flex-1 flex flex-col overflow-hidden relative bg-[#0d1117]">
-          {!isAuthenticated && (
-            <div className="absolute inset-0 z-40 bg-[#0d1117]/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center animate-apple-fade select-none">
-              <div className="max-w-md w-full bg-[#16171d] border border-[#232530] rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-[#c0f200]/10 flex items-center justify-center border border-[#c0f200]/20 text-[#c0f200]">
-                  <GobeAiLogo className="w-7 h-7" variant="brand" />
-                </div>
-                <div className="space-y-1">
-                  <h2 className="text-lg font-semibold text-white">Sign In to Access Workspace</h2>
-                  <p className="text-xs text-zinc-400">
-                    Sign in or create an account to view code reviews, repositories, and AI diagnostics.
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 w-full mt-2">
-                  <button
-                    onClick={() => {
-                      setAuthModalMode('login');
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="flex-1 py-2.5 rounded-lg border border-[#30363d] bg-[#21262d] hover:bg-[#30363d] text-white text-xs font-semibold transition-all cursor-pointer"
-                  >
-                    Log In
-                  </button>
-                  <button
-                    onClick={() => {
-                      setAuthModalMode('signup');
-                      setIsAuthModalOpen(true);
-                    }}
-                    className="flex-1 py-2.5 rounded-lg bg-[#c0f200] hover:bg-[#d4ff1a] text-black text-xs font-semibold transition-all cursor-pointer shadow-md"
-                  >
-                    Sign Up
-                  </button>
-                </div>
-                <button
-                  onClick={() => setIsLandingModalOpen(true)}
-                  className="text-xs text-[#c0f200] hover:underline transition-colors cursor-pointer mt-1"
-                >
-                  View GoBetter AI Overview
-                </button>
-              </div>
-            </div>
-          )}
           <>
               {activeTab === 'overview' && (
                 <OverviewDashboard
@@ -908,8 +930,9 @@ export const App: React.FC = () => {
       {/* Landing Page Marketing Modal */}
       <LandingModal
         isOpen={isLandingModalOpen}
+        isAuthed={localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'))}
         onClose={() => {
-          const isAuthed = localStorage.getItem('showMarketingPopup') === 'false';
+          const isAuthed = localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'));
           if (!isAuthed) {
             setAuthModalMode('signup');
             setIsAuthModalOpen(true);
@@ -919,6 +942,7 @@ export const App: React.FC = () => {
         isSidebarCollapsed={isSidebarCollapsed}
         onOpenAuth={(mode) => {
           setAuthModalMode(mode);
+          setIsLandingModalOpen(false);
           setIsAuthModalOpen(true);
           window.history.pushState({ auth: mode }, '', `/${mode}`);
           document.title = mode === 'login' ? 'Log In | GoBetter AI' : 'Create Account | GoBetter AI';

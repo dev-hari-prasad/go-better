@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, ReactNode } from 'react';
 import { createPortal } from 'react-dom';
+import { Squircle } from '@squircle-js/react';
 
 interface PopoverProps {
   trigger: ReactNode;
@@ -156,11 +157,28 @@ export const Popover: React.FC<PopoverProps> = ({
       </div>
       {isOpen && createPortal(
         <div 
-          className={`fixed z-[9999] bg-[#1a1b22] border border-[#30363d] rounded-lg shadow-xl p-1 font-sans animate-apple-scale origin-top ${width}`}
-          style={getPositionStyles()}
+          className={`fixed z-[9999] p-0 font-sans animate-apple-scale origin-top ${width}`}
+          style={{
+            ...getPositionStyles(),
+            filter: 'drop-shadow(0 12px 32px rgba(0,0,0,0.65))',
+          }}
           onClick={(e) => e.stopPropagation()}
         >
-          {content}
+          <Squircle
+            cornerRadius={12}
+            cornerSmoothing={1}
+            defaultWidth={popoverWidth}
+            className="w-full p-[1px] bg-[#30363d] overflow-hidden"
+          >
+            <Squircle
+              cornerRadius={11}
+              cornerSmoothing={1}
+              defaultWidth={popoverWidth ? popoverWidth - 2 : undefined}
+              className="w-full bg-[#1a1b22] p-1 overflow-hidden"
+            >
+              {content}
+            </Squircle>
+          </Squircle>
         </div>,
         document.body
       )}

@@ -379,13 +379,20 @@ export async function fetchActiveModelList(forceRefresh: boolean = false): Promi
   }
 
   try {
-    const userId = getAuthUserId();
+    const sessionId = localStorage.getItem('session_id');
+    // If not logged in, avoid sending request that causes 401 Unauthorized
+    if (!sessionId) {
+      return DEFAULT_MODEL_CATALOG;
+    }
+
     const response = await fetch(`${API_BASE_URL}/byok/model-list`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: userId,
+        Authorization: `Bearer ${sessionId}`,
+        'x-session-id': sessionId,
       },
+      credentials: 'include',
     });
 
     if (!response.ok) {

@@ -1,3 +1,4 @@
+import '../config/env.ts';
 import "dotenv/config";
 import { Pool } from "pg";
 import * as schema from "./schema/index.ts";

@@ -22,8 +22,6 @@ import {
   getCurrentSession,
 } from '../../services/authApi';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.gobetter.dev';
-
 export type AuthMode = 'signup' | 'login' | 'forgot-password' | 'reset-password';
 type AuthStep = 'form' | 'otp_verify' | 'forgot_password' | 'verify_forgot_password' | 'reset_password';
 
@@ -60,9 +58,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resendCooldown, setResendCooldown] = useState<number>(0);
+  const [lastUsedAuth, setLastUsedAuth] = useState<'email' | 'github' | null>(() => {
+    const saved = localStorage.getItem('last_used_auth_method') || localStorage.getItem('user_auth_provider');
+    return saved === 'email' || saved === 'github' ? saved : null;
+  });
   const [isLogoBlinking, setIsLogoBlinking] = useState(false);
   const [logoBlinkKey, setLogoBlinkKey] = useState(0);
-  const blinkTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const blinkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const triggerLogoBlink = useCallback(() => {
     if (blinkTimerRef.current) {
@@ -132,10 +134,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setIsSubmitting(false);
       setResendCooldown(0);
 
+      // Sync last used auth method from localStorage
+      const savedAuth = localStorage.getItem('last_used_auth_method') || localStorage.getItem('user_auth_provider');
+      setLastUsedAuth(savedAuth === 'email' || savedAuth === 'github' ? savedAuth : null);
+
       // Trigger logo blink on modal open
       triggerLogoBlink();
     }
   }, [isOpen, initialMode, triggerLogoBlink]);
+
+  // Sync lastUsedAuth whenever mode changes or user profile is updated
+  useEffect(() => {
+    if (!isOpen) return;
+    const syncLastUsed = () => {
+      const saved = localStorage.getItem('last_used_auth_method') || localStorage.getItem('user_auth_provider');
+      setLastUsedAuth(saved === 'email' || saved === 'github' ? saved : null);
+    };
+    syncLastUsed();
+    window.addEventListener('storage', syncLastUsed);
+    window.addEventListener('user-profile-updated', syncLastUsed);
+    return () => {
+      window.removeEventListener('storage', syncLastUsed);
+      window.removeEventListener('user-profile-updated', syncLastUsed);
+    };
+  }, [isOpen, mode]);
 
   // Handle ESC key to exit
   useEffect(() => {
@@ -176,32 +198,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const handleGitHubAuth = () => {
     triggerLogoBlink();
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      const githubUsername = 'octocat-dev';
-      const userEmail = 'octocat@users.noreply.github.com';
-      const displayName = 'Octocat Developer';
-
-      localStorage.setItem('showMarketingPopup', 'false');
-      localStorage.setItem('gobe-user-id', githubUsername);
-      localStorage.setItem('user_profile_name', displayName);
-      localStorage.setItem('user_profile_email', userEmail);
-      localStorage.setItem('user_auth_provider', 'github');
-
-      window.dispatchEvent(new Event('user-profile-updated'));
-      window.dispatchEvent(new Event('user-changed'));
-
-      toast.success(
-        mode === 'signup'
-          ? 'Account created with GitHub successfully!'
-          : 'Signed in with GitHub successfully!'
-      );
-
-      if (onAuthSuccess) {
-        onAuthSuccess({ name: displayName, email: userEmail, provider: 'github' });
-      }
-      onClose();
-    }, 600);
+    localStorage.setItem('last_used_auth_method', 'github');
+    setLastUsedAuth('github');
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://api.gobetter.dev';
+    const redirectParam = encodeURIComponent(window.location.origin);
+    const targetUrl = `${apiBase}/auth/github?redirect_uri=${redirectParam}`;
+    console.log('[AUTH-CLIENT] Initiating GitHub auth redirect to:', targetUrl);
+    window.location.assign(targetUrl);
   };
 
   // Submit email to backend /auth/login or /auth/signup
@@ -249,6 +252,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         localStorage.setItem('user_profile_name', displayName);
         localStorage.setItem('user_profile_email', cleanEmail);
         localStorage.setItem('user_auth_provider', 'email');
+        localStorage.setItem('last_used_auth_method', 'email');
+        setLastUsedAuth('email');
 
         window.dispatchEvent(new Event('user-profile-updated'));
         window.dispatchEvent(new Event('user-changed'));
@@ -368,6 +373,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       localStorage.setItem('user_profile_name', displayName);
       localStorage.setItem('user_profile_email', userEmail);
       localStorage.setItem('user_auth_provider', 'email');
+      localStorage.setItem('last_used_auth_method', 'email');
+      setLastUsedAuth('email');
 
       window.dispatchEvent(new Event('user-profile-updated'));
       window.dispatchEvent(new Event('user-changed'));
@@ -488,6 +495,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         localStorage.setItem('user_profile_name', displayName);
         localStorage.setItem('user_profile_email', updatedUser.email || cleanEmail);
         localStorage.setItem('user_auth_provider', 'email');
+        localStorage.setItem('last_used_auth_method', 'email');
+        setLastUsedAuth('email');
 
         window.dispatchEvent(new Event('user-profile-updated'));
         window.dispatchEvent(new Event('user-changed'));
@@ -574,7 +583,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div
       onClickCapture={handleCaptureClick}
-      className="fixed inset-0 z-[9999] overflow-y-auto bg-[#0d1117] flex flex-col justify-between min-h-screen animate-apple-fade select-none"
+      className="fixed inset-0 z-[99999] overflow-y-auto bg-[#0d1117] flex flex-col justify-between min-h-screen select-none"
     >
       {/* ── Aurora Silk Drapery Background (Matching Resend Screenshot) ── */}
       <AuroraSilkBackground />
@@ -654,12 +663,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
             </div>
 
-            {/* Log in with GitHub Button with SVGL GitHub Icon */}
+            {/* GitHub authentication button with SVGL GitHub icon */}
             <button
               type="button"
               onClick={handleGitHubAuth}
               disabled={isSubmitting}
-              className="mt-8 sm:mt-9 w-full flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#16171d] hover:bg-[#20222a] border border-white/10 hover:border-white/20 text-white font-medium text-xs sm:text-sm font-sans tracking-tight transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50 group"
+              className="mt-8 sm:mt-9 w-full relative flex items-center justify-center gap-2.5 py-2.5 px-4 rounded-xl bg-[#16171d] hover:bg-[#20222a] border border-white/10 hover:border-white/20 text-white font-medium text-xs sm:text-sm font-sans tracking-tight transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50 group"
             >
               {isSubmitting ? (
                 <>
@@ -669,7 +678,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               ) : (
                 <>
                   <GitHubDark className="w-[18px] h-[18px] shrink-0 text-white group-hover:scale-105 transition-transform" />
-                  <span>Log in with GitHub</span>
+                  <span>{mode === 'signup' ? 'Sign up with GitHub' : 'Continue with GitHub'}</span>
+                  {mode === 'login' && lastUsedAuth === 'github' && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#c0f200]/10 text-[#c0f200] border border-[#c0f200]/25 tracking-normal shadow-xs pointer-events-none">
+                      Last used
+                    </span>
+                  )}
                 </>
               )}
             </button>
@@ -735,6 +749,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onFocus={() => setIsPasswordFocused(true)}
@@ -875,7 +890,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="w-full mt-4 py-2.5 px-4 rounded-xl bg-[#1e2029] hover:bg-[#282b36] border border-white/10 hover:border-white/20 text-white font-medium text-xs sm:text-sm font-sans tracking-tight transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full mt-4 py-2.5 px-4 rounded-xl bg-[#1e2029] hover:bg-[#282b36] border border-white/10 hover:border-white/20 text-white font-medium text-xs sm:text-sm font-sans tracking-tight transition-all duration-200 cursor-pointer shadow-sm active:scale-[0.99] disabled:opacity-50 flex items-center justify-center gap-2 relative"
               >
                 {isSubmitting ? (
                   <>
@@ -883,7 +898,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <span>{mode === 'signup' ? 'Sending code...' : 'Signing in...'}</span>
                   </>
                 ) : (
-                  <span>{mode === 'signup' ? 'Create account' : 'Log in'}</span>
+                  <>
+                    <span>{mode === 'signup' ? 'Create account' : 'Log in'}</span>
+                    {mode === 'login' && lastUsedAuth === 'email' && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#c0f200]/10 text-[#c0f200] border border-[#c0f200]/25 tracking-normal shadow-xs pointer-events-none">
+                        Last used
+                      </span>
+                    )}
+                  </>
                 )}
               </button>
             </form>
@@ -1127,6 +1149,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <input
                     type={showNewPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
+                    autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     onFocus={() => setIsNewPasswordFocused(true)}
@@ -1356,6 +1379,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <input
                     type={showOldPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
+                    autoComplete="current-password"
                     value={oldPassword}
                     onChange={(e) => setOldPassword(e.target.value)}
                     className="w-full px-3.5 py-2.5 pr-10 bg-[#121318] border border-white/10 focus:border-white/25 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/10 transition-all font-sans"
@@ -1378,6 +1402,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <input
                     type={showNewPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
+                    autoComplete="new-password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     onFocus={() => setIsNewPasswordFocused(true)}
@@ -1445,6 +1470,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="••••••••••••"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     className="w-full px-3.5 py-2.5 pr-10 bg-[#121318] border border-white/10 focus:border-white/25 rounded-xl text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-white/10 transition-all font-sans"

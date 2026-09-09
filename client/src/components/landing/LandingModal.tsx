@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   ShieldCheck,
   Lightning,
@@ -17,12 +17,15 @@ import { HexagonPattern } from '../ui/hexagon-pattern';
 import { GobeAiLogo } from '../ui/GobeAiLogo';
 import { ReviewComparisonTable } from './ReviewComparisonTable';
 import { navigateTo } from '../../router/routes';
+import { Squircle } from '@squircle-js/react';
+import { GitHubDark } from '@ridemountainpig/svgl-react';
 
 interface LandingModalProps {
   isOpen: boolean;
   onClose: () => void;
   isSidebarCollapsed?: boolean;
   onOpenAuth?: (mode: 'signup' | 'login') => void;
+  isAuthed?: boolean;
 }
 
 /* ─── Marquee Feature Item ─── */
@@ -38,16 +41,46 @@ export const LandingModal: React.FC<LandingModalProps> = ({
   onClose,
   isSidebarCollapsed = false,
   onOpenAuth,
+  isAuthed: propIsAuthed,
 }) => {
+  const isAuthed = propIsAuthed ?? (
+    typeof window !== 'undefined' &&
+    (localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id')) || Boolean(localStorage.getItem('user_db_id')))
+  );
+
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isAuthed) return;
     const fn = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', fn);
     return () => window.removeEventListener('keydown', fn);
-  }, [isOpen, onClose]);
+  }, [isOpen, isAuthed, onClose]);
+
+  const [isHeaderVisible, setIsHeaderVisible] = useState(true);
+  const [isHeaderHovered, setIsHeaderHovered] = useState(false);
+  const lastScrollY = useRef(0);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const currentY = e.currentTarget.scrollTop;
+    const diff = currentY - lastScrollY.current;
+
+    if (currentY > 40) {
+      if (diff > 5) {
+        // Scrolling down -> hide header
+        setIsHeaderVisible(false);
+      } else if (diff < -5) {
+        // Scrolling up -> reveal header
+        setIsHeaderVisible(true);
+      }
+    } else {
+      // Near top of modal -> always reveal
+      setIsHeaderVisible(true);
+    }
+    lastScrollY.current = currentY;
+  };
+
+  const showHeader = isHeaderVisible || isHeaderHovered;
 
   const handleAuthClick = (mode: 'signup' | 'login') => {
-    onClose();
     if (onOpenAuth) {
       onOpenAuth(mode);
     } else {
@@ -80,8 +113,10 @@ export const LandingModal: React.FC<LandingModalProps> = ({
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-6 animate-apple-fade select-none">
       {/* Modal Backdrop */}
       <div
-        className="absolute inset-0 cursor-pointer bg-black/80 backdrop-blur-md transition-opacity"
-        onClick={onClose}
+        className={`absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity ${isAuthed ? 'cursor-pointer' : 'cursor-default'}`}
+        onClick={() => {
+          if (isAuthed) onClose();
+        }}
       />
 
       {/* Marquee Keyframe Styles */}
@@ -101,38 +136,72 @@ export const LandingModal: React.FC<LandingModalProps> = ({
       `}</style>
 
       {/* Modal Positioning Shell */}
-      <div className="relative z-10 w-full max-w-[1100px]">
-        {/* Exit Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 md:-right-12 md:top-4 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all bg-white/10 hover:bg-white/20 border border-white/20 text-zinc-300 hover:text-white shadow-xl hover:scale-105"
-          title="Close (Esc)"
-          aria-label="Close"
-        >
-          <svg width="12" height="12" viewBox="0 0 11 11" fill="none">
-            <path d="M1 1l9 9M10 1L1 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-          </svg>
-        </button>
+      <div 
+        className="relative z-10 w-full max-w-[1100px]"
+        style={{ filter: 'drop-shadow(0 30px 80px rgba(0,0,0,0.9))' }}
+      >
+        {/* Exit Close Button — ONLY shown when user is logged in */}
+        {isAuthed && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 md:-right-12 md:top-4 z-50 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full transition-all bg-white/10 hover:bg-white/20 border border-white/20 text-zinc-300 hover:text-white shadow-xl hover:scale-105"
+            title="Close (Esc)"
+            aria-label="Close"
+          >
+            <svg width="12" height="12" viewBox="0 0 11 11" fill="none">
+              <path d="M1 1l9 9M10 1L1 10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            </svg>
+          </button>
+        )}
 
-        {/* Modal Container */}
-        <div
-          className="relative w-full max-h-[85vh] overflow-y-auto overflow-x-hidden rounded-2xl"
+        {/* Modal Container with 1px Apple-style Squircle Border */}
+        <Squircle
+          cornerRadius={24}
+          cornerSmoothing={1}
+          defaultWidth={1100}
+          defaultHeight={750}
+          className="relative w-full max-h-[85vh] p-[1px] bg-white/[0.10] overflow-hidden"
           style={{
-            background: '#080a0f',
-            border: '1px solid rgba(255,255,255,0.08)',
             boxShadow: '0 40px 120px rgba(0,0,0,0.85)',
-            scrollbarWidth: 'none',
           }}
         >
-          {/* ════ 0. TOP NAVBAR / HEADER ════ */}
-          <header className="sticky top-0 z-40 w-full px-5 py-3 md:px-7 md:py-3.5 flex items-center justify-between border-b border-white/[0.08] bg-[#070906]/90 backdrop-blur-xl">
-            {/* Left: Brand Logo & Name */}
-            <div className="flex items-center gap-2 select-none">
-              <GobeAiLogo className="w-4.5 h-4.5 shrink-0" variant="brand" />
-              <span className="text-xs md:text-sm font-semibold text-white tracking-tight font-sans">
-                GoBetter <span className="text-[#c0f200]">AI</span>
-              </span>
-            </div>
+          <Squircle
+            cornerRadius={23}
+            cornerSmoothing={1}
+            defaultWidth={1100}
+            defaultHeight={750}
+            onScroll={handleScroll}
+            className="relative w-full max-h-[calc(85vh-2px)] overflow-y-auto overflow-x-hidden"
+            style={{
+              background: '#080a0f',
+              scrollbarWidth: 'none',
+            }}
+          >
+            {/* Invisible sticky top hover sensor to reveal header on hover even when scrolled down */}
+            <div
+              className="sticky top-0 left-0 right-0 h-6 -mb-6 z-40 pointer-events-auto"
+              onMouseEnter={() => setIsHeaderHovered(true)}
+              onMouseLeave={() => setIsHeaderHovered(false)}
+            />
+
+            {/* ════ 0. TOP NAVBAR / HEADER ════ */}
+            <header
+              onMouseEnter={() => setIsHeaderHovered(true)}
+              onMouseLeave={() => setIsHeaderHovered(false)}
+              className="sticky top-0 z-40 w-full px-5 py-2 md:px-7 md:py-2.5 flex items-center justify-between border-b border-white/[0.08] bg-[#070906]/90 backdrop-blur-xl rounded-t-[23px] will-change-transform"
+              style={{
+                transform: showHeader ? 'translateY(0)' : 'translateY(-100%)',
+                opacity: showHeader ? 1 : 0,
+                transition: 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease',
+              }}
+            >
+              {/* Left: Brand Logo & Name (Larger logo & wordmark) */}
+              <div className="flex items-center gap-2.5 select-none">
+                <GobeAiLogo size={22} className="shrink-0" variant="brand" />
+                <span className="text-[16px] md:text-[17px] font-medium tracking-tight font-sans">
+                  <span className="text-[#f4f4f5]">Go</span><span className="text-[#c0f200]">Better</span>
+                </span>
+              </div>
 
             {/* Center: Navigation Links with Phosphor Icons */}
             <nav className="flex items-center gap-4 sm:gap-6">
@@ -150,7 +219,7 @@ export const LandingModal: React.FC<LandingModalProps> = ({
                 rel="noreferrer"
                 className="group flex items-center gap-1.5 text-xs text-zinc-300 hover:text-[#c0f200] transition-colors font-medium font-sans"
               >
-                <GithubLogo size={14} weight="duotone" className="text-zinc-400 group-hover:text-[#c0f200] transition-colors" />
+                <GitHubDark className="w-3.5 h-3.5 shrink-0 opacity-80 group-hover:opacity-100 transition-opacity" />
                 <span>Github</span>
               </a>
               <a
@@ -183,13 +252,13 @@ export const LandingModal: React.FC<LandingModalProps> = ({
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleAuthClick('login')}
-                className="text-xs text-zinc-300 hover:text-white font-medium font-sans px-2.5 py-1 transition-colors cursor-pointer"
+                className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/[0.18] text-zinc-200 hover:text-white border border-white/15 text-xs font-medium font-sans transition-all cursor-pointer shadow-xs active:scale-[0.98]"
               >
                 Log in
               </button>
               <button
                 onClick={() => handleAuthClick('signup')}
-                className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#c0f200] hover:bg-[#d4ff1a] text-black text-xs font-semibold font-sans tracking-tight hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-sm"
+                className="flex items-center gap-1 px-3.5 py-1 rounded-full bg-[#c0f200] hover:bg-[#d4ff1a] text-black text-xs font-semibold font-sans tracking-tight hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer shadow-sm"
               >
                 <span>Sign up</span>
               </button>
@@ -198,7 +267,7 @@ export const LandingModal: React.FC<LandingModalProps> = ({
 
           {/* ════ 1. HERO CTA PANEL (ATTACHED TO SIDES & TOP, NO BOTTOM RADIUS) ════ */}
           <div
-            className="relative overflow-hidden w-full rounded-none border-b border-[#c0f200]/12 shadow-[0_0_20px_rgba(192,242,0,0.03)]"
+            className="relative overflow-hidden w-full border-b border-white/[0.08] shadow-[0_0_20px_rgba(192,242,0,0.03)]"
             style={{
               background: 'linear-gradient(165deg, #070906 0%, #0b1007 45%, #0e1408 70%, #050804 100%)',
             }}
@@ -279,7 +348,7 @@ export const LandingModal: React.FC<LandingModalProps> = ({
             </div>
 
             {/* Integrated Bottom Feature Strip with Continuous Horizontal Marquee (Flat Bottom) */}
-            <div className="relative z-20 w-full border-t border-white/12 bg-black/40 backdrop-blur-md py-4 overflow-hidden rounded-b-none">
+            <div className="relative z-20 w-full border-t border-white/[0.08] bg-black/40 backdrop-blur-md py-4 overflow-hidden">
               {/* Gradient Edge Vignette Masks */}
               <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-black/60 to-transparent z-30 pointer-events-none" />
               <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-black/60 to-transparent z-30 pointer-events-none" />
@@ -295,11 +364,12 @@ export const LandingModal: React.FC<LandingModalProps> = ({
           </div>
 
           {/* ════ 2. SUBSEQUENT CONTENT (PADDED) ════ */}
-          <div className="px-6 pb-8 md:px-8 md:pb-12 space-y-8">
+          <div className="px-6 pb-8 md:px-8 md:pb-12 space-y-8 rounded-b-[23px]">
             <ReviewComparisonTable />
             <ArchitectureScaleSection />
           </div>
-        </div>
+          </Squircle>
+        </Squircle>
       </div>
     </div>
   );

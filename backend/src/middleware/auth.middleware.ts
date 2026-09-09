@@ -3,7 +3,7 @@ import { API_RESPONSE_MESSAGES } from "../constants/apiResponse.ts";
 import redis from "../lib/redis/redisClient.ts";
 import { REDIS_KEYS } from "../lib/redis/redisKeys.ts";
 import { db } from "../database/dbClient.ts";
-import { session } from "../database/schema/index.ts";
+import { session, users } from "../database/schema/index.ts";
 import { eq } from "drizzle-orm";
 
 declare global {
@@ -17,10 +17,23 @@ declare global {
 async function authMiddleware
     (req: Request, res: Response, next: NextFunction) {
     try {
-    // Extract cookie from the request 
-    const sessionId = req.cookies.sessionId
+    // Extract session from cookies (session or sessionId), Authorization header, or x-session-id
+    let sessionId: string | undefined = req.cookies?.session || req.cookies?.sessionId;
 
-    if(!sessionId) {
+    if (!sessionId) {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            sessionId = authHeader.startsWith('Bearer ')
+                ? authHeader.slice(7).trim()
+                : authHeader.trim();
+        }
+    }
+
+    if (!sessionId && req.headers['x-session-id']) {
+        sessionId = String(req.headers['x-session-id']).trim();
+    }
+
+    if (!sessionId) {
         return res.status(401).json({
             error: API_RESPONSE_MESSAGES[401]
         })
@@ -58,6 +71,13 @@ async function authMiddleware
 
             // Return unautrozied incase session is not in the database or has expired
             if (sessionInfoFromDb.length === 0) {
+                // Fallback: check if sessionId is directly a valid userId in users table
+                const userExists = await db.select({ id: users.id }).from(users).where(eq(users.id, sessionId)).limit(1);
+                if (userExists.length > 0) {
+                    req.userId = userExists[0]!.id;
+                    return next();
+                }
+
                 return res.status(401).json({
                     error: API_RESPONSE_MESSAGES[401]
                 })
@@ -71,7 +91,7 @@ async function authMiddleware
                 await db.delete(session)
                     .where(eq(session.id, sessionId))
 
-                return res.clearCookie('session').status(401).json({
+                return res.clearCookie('session').clearCookie('sessionId').status(401).json({
                     error: API_RESPONSE_MESSAGES[401]
                 })
             } 

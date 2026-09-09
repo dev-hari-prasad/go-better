@@ -1,0 +1,37 @@
+services:
+  # required backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: DockerFile
+    image: go-better-backend
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - path: ./backend/.env
+        required: false
+    restart: unless-stopped
+    networks:
+      - goBetter
+    
+  # Optional frontend service 
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    image: go-better-frontend
+    ports:
+      - "3000:80"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - path: ./client/.env
+        required: false
+    restart: unless-stopped
+    networks:
+      - goBetter
+
+networks:
+  goBetter:

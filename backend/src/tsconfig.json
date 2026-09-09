@@ -10,9 +10,9 @@
     "module": "nodenext",
     "target": "esnext",
     // "types": [],
-    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
     "resolveJsonModule": true,
-    "noEmit": true,
+    "noEmit": false,
     // For nodejs:
     // "lib": ["esnext"],
     "types": ["node"],

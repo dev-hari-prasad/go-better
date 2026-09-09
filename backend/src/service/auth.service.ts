@@ -38,9 +38,9 @@ export async function createSession(userId: string, userAgent: object) {
 
         return sessionDbInfo[0]!.id
 
-    }catch(err) {
-        return 
-            false
+    } catch (err) {
+        console.error('[AUTH-SERVICE] Error creating session in database/redis:', err);
+        return false;
     } 
     
 }

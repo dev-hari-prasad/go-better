@@ -10,6 +10,7 @@ import {
 import { GitPullRequest, Book, RotateCw, Info } from 'lucide-react';
 import { GitFork, UserPlus } from '@phosphor-icons/react';
 import { GobeAiLogo } from '../ui/GobeAiLogo';
+import { GitHubDark } from '@ridemountainpig/svgl-react';
 import { Repository } from '../../types/codeReview';
 import { ProfileEditModal } from '../settings/ProfileEditModal';
 import { UserAvatar } from '../ui/UserAvatar';
@@ -96,6 +97,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         if (storedEmail) setUserEmail(storedEmail);
         if (storedAvatar) setAvatarStyleId(storedAvatar);
       }
+      void loadUsage();
     };
     window.addEventListener('user-profile-updated', handleProfileUpdated);
     window.addEventListener('user-changed', handleProfileUpdated);
@@ -105,7 +107,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       window.removeEventListener('user-changed', handleProfileUpdated);
       window.removeEventListener('storage', handleProfileUpdated);
     };
-  }, []);
+  }, [loadUsage]);
 
   interface NavItem {
     id: NavTab;
@@ -481,8 +483,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   }}
                   className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-[#c0f200] hover:bg-[#c0f200]/10 transition-colors cursor-pointer"
                 >
-                  <UserPlus size={14} className="text-[#c0f200]" />
-                  <span>Sign In / Register</span>
+                  <GitHubDark className="w-3.5 h-3.5 shrink-0" />
+                  <span>Login/Sign up</span>
                 </button>
 
                 <button

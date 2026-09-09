@@ -13,6 +13,7 @@ import { SeverityBadge } from '../ui/Badge';
 import { Github, GitPullRequest, Book, Plus } from 'lucide-react';
 import { ChatTeardrop } from '@phosphor-icons/react';
 import { GobeAiLogo } from '../ui/GobeAiLogo';
+import { GitHubDark } from '@ridemountainpig/svgl-react';
 
 interface HeaderBarProps {
   currentTab: string;
@@ -217,11 +218,11 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                     window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'signup' } }));
                   }
                 }}
-                className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-[#c0f200] hover:bg-[#d2ff3d] text-black text-xs font-semibold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] group"
+                className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-[#c0f200] hover:bg-[#d2ff3d] text-black text-xs font-semibold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] group"
                 title="Sign in or link your account"
               >
-                <Github className="w-4 h-4 transition-transform group-hover:scale-110" />
-                <span>Sign In / Register</span>
+                <GitHubDark className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Login/Sign up</span>
               </button>
             )}
           </div>

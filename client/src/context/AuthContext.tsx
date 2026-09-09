@@ -85,15 +85,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('user_db_id', activeSession.userId);
         localStorage.setItem('user_id', activeSession.userId);
         localStorage.setItem('session_id', activeSession.id);
+        if (activeSession.userName) {
+          localStorage.setItem('user_profile_name', activeSession.userName);
+        }
+        if (activeSession.userEmail) {
+          localStorage.setItem('user_profile_email', activeSession.userEmail);
+        }
+        if (activeSession.loginMethod) {
+          localStorage.setItem('user_auth_provider', activeSession.loginMethod);
+          if (activeSession.loginMethod === 'email' || activeSession.loginMethod === 'github') {
+            localStorage.setItem('last_used_auth_method', activeSession.loginMethod);
+          }
+        }
 
         setUser((prev) => {
-          const email = localStorage.getItem('user_profile_email') || prev?.email || '';
-          const name = localStorage.getItem('user_profile_name') || prev?.name || (email ? email.split('@')[0] : 'Developer');
+          const email = activeSession.userEmail || localStorage.getItem('user_profile_email') || prev?.email || '';
+          const name = activeSession.userName || localStorage.getItem('user_profile_name') || prev?.name || (email ? email.split('@')[0] : 'Developer');
           return {
             id: activeSession.userId || prev?.id || '',
             name,
             email,
-            provider: (localStorage.getItem('user_auth_provider') as any) || 'email',
+            provider: activeSession.loginMethod || (localStorage.getItem('user_auth_provider') as any) || 'email',
           };
         });
         return activeSession;
@@ -197,6 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user_profile_name', displayName);
     localStorage.setItem('user_profile_email', returnedUser?.email || cleanEmail);
     localStorage.setItem('user_auth_provider', 'email');
+    localStorage.setItem('last_used_auth_method', 'email');
 
     setUser({
       id: userId,
@@ -225,6 +238,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user_profile_name', displayName);
     localStorage.setItem('user_profile_email', cleanEmail);
     localStorage.setItem('user_auth_provider', 'email');
+    localStorage.setItem('last_used_auth_method', 'email');
 
     // Retrieve active session details immediately
     const sess = await refreshSession();
@@ -276,6 +290,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user_profile_name', displayName);
     localStorage.setItem('user_profile_email', updatedUser?.email || cleanEmail);
     localStorage.setItem('user_auth_provider', 'email');
+    localStorage.setItem('last_used_auth_method', 'email');
 
     setUser({
       id: userId,
@@ -399,6 +414,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user_profile_name', gitHubData.name);
     localStorage.setItem('user_profile_email', gitHubData.email);
     localStorage.setItem('user_auth_provider', 'github');
+    localStorage.setItem('last_used_auth_method', 'github');
 
     setUser({
       id: gitHubData.username,

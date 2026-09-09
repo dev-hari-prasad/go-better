@@ -155,8 +155,8 @@ export const LegalView: React.FC<LegalViewProps> = ({
               title="Return to GoBetter App"
             >
               <GobeAiLogo size={24} variant="brand" />
-              <span className="font-semibold text-white tracking-tight text-sm group-hover:text-[#c0f200] transition-colors">
-                GoBetter
+              <span className="font-normal tracking-tight text-sm font-sans select-none">
+                <span className="text-[#f4f4f5]">Go</span><span className="text-[#c0f200]">Better</span>
               </span>
             </button>
             <span className="text-zinc-600 text-xs">/</span>

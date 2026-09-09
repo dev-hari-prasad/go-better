@@ -27,6 +27,9 @@ export interface UserSession {
   createdAt: string;
   expiresAt?: string;
   userAgent?: SessionUserAgent | string;
+  userName?: string;
+  userEmail?: string | null;
+  loginMethod?: 'email' | 'github';
 }
 
 export interface SignupPayload {
@@ -245,9 +248,16 @@ export async function resetPassword(payload: ResetPasswordPayload): Promise<void
  */
 export async function getCurrentSession(): Promise<UserSession | null> {
   try {
+    const sessionId = localStorage.getItem('session_id');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (sessionId) {
+      headers['Authorization'] = `Bearer ${sessionId}`;
+      headers['x-session-id'] = sessionId;
+    }
+
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       credentials: 'include',
     });
 
@@ -265,9 +275,16 @@ export async function getCurrentSession(): Promise<UserSession | null> {
  */
 export async function getAllSessions(): Promise<UserSession[]> {
   try {
+    const sessionId = localStorage.getItem('session_id');
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (sessionId) {
+      headers['Authorization'] = `Bearer ${sessionId}`;
+      headers['x-session-id'] = sessionId;
+    }
+
     const response = await fetch(`${API_BASE_URL}/auth/sessions`, {
       method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       credentials: 'include',
     });
 

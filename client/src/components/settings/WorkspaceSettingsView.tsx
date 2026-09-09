@@ -777,13 +777,10 @@ const AccountSessionsTab: React.FC = () => {
         </div>
 
         {/* GitHub Two-Way Integration Notification Notice */}
-        <div className="p-3.5 rounded-xl bg-[#121319] border border-[#232530] text-xs space-y-1.5">
-          <div className="flex items-center gap-1.5 text-zinc-200 font-semibold text-xs">
-            <Github className="w-4 h-4 text-[#c0f200] shrink-0" />
-            <span>GitHub Two-Way Integration Notice</span>
-          </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
-            When two-way integration with GitHub is active, GitHub will notify you directly of any normal comment, review, or activity on a pull request according to your GitHub account notification settings. This activity is handled externally by GitHub and is not within our direct control.
+        <div className="px-3.5 py-2.5 rounded-xl bg-[#121319] border border-[#232530] flex items-center gap-2.5 text-xs text-zinc-400">
+          <Github className="w-4 h-4 text-[#c0f200] shrink-0" />
+          <p className="text-[11px] text-zinc-400 leading-snug">
+            GitHub directly manages comment and review notifications according to your GitHub account settings.
           </p>
         </div>
       </div>

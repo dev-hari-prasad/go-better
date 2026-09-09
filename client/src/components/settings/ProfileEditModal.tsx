@@ -4,7 +4,6 @@ import { XMarkIcon } from '@heroicons/react/24/outline';
 import { 
   Github, 
   Mail, 
-  Phone, 
   Check, 
   LogOut, 
   Trash2, 
@@ -21,7 +20,6 @@ import {
   Bell,
   Info,
 } from 'lucide-react';
-import { Google } from '@ridemountainpig/svgl-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '../ui/UserAvatar';
 import { AvatarStyleId } from '../../utils/avatarUtils';
@@ -41,25 +39,9 @@ interface ProfileEditModalProps {
   onClose: () => void;
 }
 
-type LoginMethod = 'github' | 'google' | 'email' | 'phone';
-
-interface LoginMethodOption {
-  id: LoginMethod;
-  label: string;
-  icon: React.ElementType;
-}
-
-const LOGIN_METHODS: LoginMethodOption[] = [
-  { id: 'github', label: 'GitHub', icon: Github },
-  { id: 'google', label: 'Google', icon: Google },
-  { id: 'email', label: 'Email', icon: Mail },
-  { id: 'phone', label: 'Phone', icon: Phone },
-];
-
 export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) => {
   const [name, setName] = useState(() => localStorage.getItem('user_profile_name') || 'Alex Mercer');
   const [email, setEmail] = useState(() => localStorage.getItem('user_profile_email') || 'alexmercer@acme.io');
-  const [loginMethod, setLoginMethod] = useState<LoginMethod>(() => (localStorage.getItem('user_login_method') as LoginMethod) || 'github');
   const [avatarStyleId, setAvatarStyleId] = useState<AvatarStyleId>(() => (localStorage.getItem('user_avatar_style') as AvatarStyleId) || 'gradient-smooth');
   const [emailNotification, setEmailNotification] = useState<boolean>(() => {
     const saved = localStorage.getItem('user_email_notification');
@@ -109,7 +91,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
     if (isOpen) {
       setName(localStorage.getItem('user_profile_name') || 'Alex Mercer');
       setEmail(localStorage.getItem('user_profile_email') || 'alexmercer@acme.io');
-      setLoginMethod((localStorage.getItem('user_login_method') as LoginMethod) || 'github');
       setAvatarStyleId((localStorage.getItem('user_avatar_style') as AvatarStyleId) || 'gradient-smooth');
       const savedNotif = localStorage.getItem('user_email_notification');
       setEmailNotification(savedNotif !== null ? savedNotif === 'true' : true);
@@ -156,7 +137,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
       localStorage.setItem('user_profile_name', updated.name || trimmedName);
       localStorage.setItem('user_profile_email', updated.email || trimmedEmail);
       localStorage.setItem('user_email_notification', String(updated.emailNotification ?? emailNotification));
-      localStorage.setItem('user_login_method', loginMethod);
       localStorage.setItem('user_avatar_style', avatarStyleId);
 
       window.dispatchEvent(
@@ -165,7 +145,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
             name: updated.name || trimmedName,
             email: updated.email || trimmedEmail,
             emailNotification: updated.emailNotification ?? emailNotification,
-            loginMethod,
             avatarStyleId,
           },
         })
@@ -179,12 +158,11 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
       localStorage.setItem('user_profile_name', trimmedName);
       localStorage.setItem('user_profile_email', trimmedEmail);
       localStorage.setItem('user_email_notification', String(emailNotification));
-      localStorage.setItem('user_login_method', loginMethod);
       localStorage.setItem('user_avatar_style', avatarStyleId);
 
       window.dispatchEvent(
         new CustomEvent('user-profile-updated', {
-          detail: { name: trimmedName, email: trimmedEmail, emailNotification, loginMethod, avatarStyleId },
+          detail: { name: trimmedName, email: trimmedEmail, emailNotification, avatarStyleId },
         })
       );
       window.dispatchEvent(new Event('user-changed'));
@@ -396,36 +374,6 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
             </div>
           </div>
 
-          {/* Sleek Segmented Login Type Picker */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider block">Login Method</label>
-              <span className="text-[10px] text-zinc-500 font-mono">Connected Provider</span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5 p-1 bg-[#121319] border border-[#232530] rounded-2xl">
-              {LOGIN_METHODS.map((method) => {
-                const isSelected = loginMethod === method.id;
-                const Icon = method.icon;
-                return (
-                  <button
-                    key={method.id}
-                    type="button"
-                    onClick={() => setLoginMethod(method.id)}
-                    className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2 px-1 rounded-xl text-xs font-semibold transition-all cursor-pointer select-none ${
-                      isSelected
-                        ? 'bg-[#c0f200] text-black shadow-sm'
-                        : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#1a1b22]'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5 shrink-0" />
-                    <span className="truncate text-[11px]">{method.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Email Notification Preferences & GitHub Two-Way Integration Notice */}
           <div className="p-4 rounded-2xl bg-[#121319] border border-[#232530] space-y-3.5">
             <div className="flex items-center justify-between gap-4">
@@ -450,13 +398,10 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
             </div>
 
             {/* GitHub Two-Way Integration Activity Notice */}
-            <div className="p-3 rounded-xl bg-[#161822] border border-[#2d3340] text-xs space-y-1.5">
-              <div className="flex items-center gap-1.5 text-zinc-200 font-semibold text-[11px]">
-                <Github className="w-3.5 h-3.5 text-[#c0f200] shrink-0" />
-                <span>GitHub Two-Way Integration Notice</span>
-              </div>
-              <p className="text-[11px] text-zinc-400 leading-relaxed">
-                When two-way integration with GitHub is active, GitHub will notify you directly of any normal comment, review, or activity on a pull request according to your GitHub account notification settings. This activity is handled externally by GitHub and is not within our direct control.
+            <div className="px-3 py-2 rounded-xl bg-[#161822] border border-[#2d3340] flex items-center gap-2 text-xs text-zinc-400">
+              <Github className="w-3.5 h-3.5 text-[#c0f200] shrink-0" />
+              <p className="text-[11px] text-zinc-400 leading-snug">
+                GitHub directly manages comment and review notifications according to your GitHub account settings.
               </p>
             </div>
           </div>

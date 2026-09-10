@@ -1,8 +1,14 @@
 // BullMQ config file
 import { Queue } from "bullmq";
-import Redis from "../lib/redis/redisClient.ts";
 
-export const connection = Redis
+const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
+
+// Dedicated connection options so BullMQ manages isolated connections per Queue/Worker
+export const connection = {
+    url: redisUrl,
+    maxRetriesPerRequest: null,
+    enableReadyCheck: false,
+};
 
 // Shared worker settings to minimize Redis request usage
 // (critical for metered providers like Upstash)
@@ -10,7 +16,8 @@ export const workerOptions = {
     // Stalled-job check every 2 min instead of every 30s
     stalledInterval: 120_000,
     maxStalledCount: 1,
-} as const
+    drainDelay: 30,
+} as const;
 
 // Queue to store unprocessed webhook payload from GitHub
 export const unprocessedWebhookPayload = 

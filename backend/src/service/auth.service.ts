@@ -75,7 +75,9 @@ export async function revokeAllSession(userId: string) {
 
         // Delete sessions from cache
         const sessionKeys = activeSessions.map(({ id }) => REDIS_KEYS.session(id))
-        await redis.del(...sessionKeys)
+        if (sessionKeys.length > 0) {
+            await redis.del(...sessionKeys)
+        }
 
         // Delete session data from database 
         await db.delete(session).where(

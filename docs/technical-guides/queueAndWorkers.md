@@ -59,3 +59,9 @@ I -. failure .-> J
 - `deadLetter` acts as the fallback queue for failed jobs after retry limits are reached.
 - Worker startup is triggered in `backend/src/server.ts` by importing the worker files at boot time.
 - `notification.worker.ts` is intentionally deferred for now. GitHub already handles native PR comment notifications, and this worker will be used in V2 for channels such as Slack and Microsoft Teams.
+
+## Why workers run in the backend process
+
+The workers currently run in the same Node.js process as the API because GoBetter is intended for internal use and the expected workload is modest. BullMQ and Redis still separate the work into durable queues, provide retries, and prevent webhook requests from waiting for the review pipeline to finish.
+
+Running each worker in a separate process would add deployment units, process supervision, environment configuration, monitoring, and additional system resources. For the current scale, that operational complexity would outweigh the benefits of process-level isolation. If GoBetter is adopted in a larger installation or experiences substantially higher review volume, open an issue to discuss splitting workers into independently scaled processes or services.

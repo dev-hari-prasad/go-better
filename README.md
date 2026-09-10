@@ -4,9 +4,6 @@
 
 # GoBetter
 
-### Autonomous AI Code Reviews Engineered for High-Scale Engineering Teams
-**Zero-Nitpick Intelligence &bull; AST-Level Defect Isolation &bull; Distributed BullMQ Queues &bull; Zero-Trust BYOK Privacy**
-
 [![Documentation](https://img.shields.io/badge/Docs-docs.gobetter.dev-c0f200?style=for-the-badge&logo=googledocs&logoColor=black)](https://docs.gobetter.dev)
 [![License: MIT-0](https://img.shields.io/badge/License-MIT--0-white?style=for-the-badge)](./LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)

@@ -1,5 +1,4 @@
 import express from 'express'
-import crypto from 'node:crypto'
 import { db } from '../database/dbClient.ts';
 import users from '../database/schema/users.ts';
 import session from '../database/schema/sessions.ts';
@@ -20,128 +19,181 @@ import {
     revokeSessionById,
     revokeAllSession
 } from '../service/auth.service.ts';
+import {
+    buildGitHubAuthorizationUrl,
+    createGitHubOAuthRequest,
+    getGitHubOAuthConfiguration,
+    resolveClientRedirect,
+    statesMatch,
+} from '../lib/githubOAuth.ts';
 
 const router: express.Router = express.Router()
 
-const githubCookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    maxAge: 10 * 60 * 1000,
+const OAUTH_COOKIE_MAX_AGE = 10 * 60 * 1000;
+
+type PendingGitHubOAuth = {
+    state: string;
+    codeVerifier: string;
+    clientUrl: string;
 };
 
-const sessionCookieOptions = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax' as const,
-    maxAge: 30 * 24 * 60 * 60 * 1000,
-};
+function cookieOptions(maxAge: number) {
+    const secure = process.env.NODE_ENV === 'production'
+        || process.env.API_BASE_URL?.startsWith('https://') === true;
 
-// Start GitHub App user authorization. The permissions shown by GitHub are
-// configured in the GitHub App settings, not supplied by the browser.
+    return {
+        httpOnly: true,
+        secure,
+        // `none` permits a separately hosted frontend to send the session to
+        // its API. Local HTTP development must use lax because browsers reject
+        // SameSite=None cookies without Secure.
+        sameSite: secure ? 'none' as const : 'lax' as const,
+        maxAge,
+    };
+}
+
+function authRedirectUrl(clientUrl: string, result: 'success' | 'error', message?: string) {
+    const redirectUrl = new URL(clientUrl);
+    redirectUrl.searchParams.set('github_auth', result);
+    if (message) {
+        redirectUrl.searchParams.set('message', message);
+    }
+
+    return redirectUrl.toString();
+}
+
+function authRedirect(res: express.Response, clientUrl: string, result: 'success' | 'error', message?: string) {
+    return res.redirect(authRedirectUrl(clientUrl, result, message));
+}
+
+function readPendingOAuth(value: string | null): PendingGitHubOAuth | null {
+    if (!value) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(value) as Partial<PendingGitHubOAuth>;
+        return typeof parsed.state === 'string'
+            && typeof parsed.codeVerifier === 'string'
+            && typeof parsed.clientUrl === 'string'
+            ? parsed as PendingGitHubOAuth
+            : null;
+    } catch {
+        return null;
+    }
+}
+
+function clearOAuthCookies(res: express.Response) {
+    return res
+        .clearCookie('github_oauth_state')
+        .clearCookie('github_oauth_verifier')
+        .clearCookie('github_client_redirect');
+}
+
+function clearAndRedirect(res: express.Response, clientUrl: string, message: string) {
+    clearOAuthCookies(res);
+    return authRedirect(res, clientUrl, 'error', message);
+}
+
+// Start the GitHub OAuth authorization-code flow. The callback URL is fixed
+// by API_BASE_URL; callers can only choose a return URL on CLIENT_URL's origin.
 router.get('/github', async (req, res) => {
-    const clientId = process.env.GITHUB_APP_CLIENT_ID;
-    const defaultClientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-    const clientUrl = (typeof req.query.redirect_uri === 'string' && req.query.redirect_uri)
-        || req.headers.referer
-        || defaultClientUrl;
-
-    console.log('\n================== [AUTH-GITHUB] INITIATE ==================');
-    console.log('[AUTH-GITHUB] Incoming query params:', req.query);
-    console.log('[AUTH-GITHUB] Referer:', req.headers.referer);
-    console.log('[AUTH-GITHUB] Target client URL for return:', clientUrl);
-    console.log('[AUTH-GITHUB] GITHUB_APP_CLIENT_ID configured?:', Boolean(clientId));
-
-    if (!clientId) {
-        console.error('[AUTH-GITHUB] ERROR: GITHUB_APP_CLIENT_ID is not configured in env!');
+    let configuration;
+    try {
+        configuration = getGitHubOAuthConfiguration();
+    } catch (err) {
+        console.error('[AUTH-GITHUB] Invalid OAuth URL configuration', err);
         return res.status(500).json({ error: 'GitHub authentication is not configured' });
     }
 
-    const state = crypto.randomBytes(32).toString('hex');
-    const callbackRedirectUri = `${process.env.API_BASE_URL || 'http://localhost:5000'}/auth/github/callback`;
-    const authorizeUrl = new URL('https://github.com/login/oauth/authorize');
-    authorizeUrl.searchParams.set('client_id', clientId);
-    authorizeUrl.searchParams.set('redirect_uri', callbackRedirectUri);
-    authorizeUrl.searchParams.set('state', state);
+    if (!configuration.clientId) {
+        console.error('[AUTH-GITHUB] OAuth client ID is not configured');
+        return res.status(500).json({ error: 'GitHub authentication is not configured' });
+    }
 
-    console.log('[AUTH-GITHUB] Generated state:', state);
-    console.log('[AUTH-GITHUB] Configured callback redirect URI:', callbackRedirectUri);
-    console.log('[AUTH-GITHUB] Redirecting user to GitHub authorize URL:', authorizeUrl.toString());
+    const requestedRedirect = typeof req.query.redirect_uri === 'string'
+        ? req.query.redirect_uri
+        : undefined;
+    const clientUrl = resolveClientRedirect(requestedRedirect, configuration.clientUrl);
+    const oauthRequest = createGitHubOAuthRequest();
+    const pendingOAuth: PendingGitHubOAuth = { ...oauthRequest, clientUrl };
 
     try {
-        // Store OAuth state and redirect URL in Redis with a 10-minute expiry
-        await redis.set(`oauth:github:${state}`, clientUrl, 'EX', 600);
-        console.log('[AUTH-GITHUB] Stored state in Redis successfully');
-    } catch (redisErr) {
-        console.warn('[AUTH-GITHUB] Failed to cache OAuth state in Redis, falling back to cookies:', redisErr);
+        await redis.set(`oauth:github:${oauthRequest.state}`, JSON.stringify(pendingOAuth), 'EX', 600);
+    } catch (err) {
+        // The HTTP-only cookie is a short-lived fallback for a transient Redis
+        // failure. Session creation still requires Redis and will fail closed.
+        console.warn('[AUTH-GITHUB] Could not cache OAuth request', err);
     }
-    console.log('============================================================\n');
 
     return res
-        .cookie('github_oauth_state', state, githubCookieOptions)
-        .cookie('github_client_redirect', clientUrl, githubCookieOptions)
-        .redirect(authorizeUrl.toString());
+        .cookie('github_oauth_state', oauthRequest.state, cookieOptions(OAUTH_COOKIE_MAX_AGE))
+        .cookie('github_oauth_verifier', oauthRequest.codeVerifier, cookieOptions(OAUTH_COOKIE_MAX_AGE))
+        .cookie('github_client_redirect', clientUrl, cookieOptions(OAUTH_COOKIE_MAX_AGE))
+        .redirect(buildGitHubAuthorizationUrl(configuration, oauthRequest));
 });
 
 // Exchange GitHub's temporary code, create/sign in the local user, and issue
-// the same session cookie used by email login.
+// the same HTTP-only session cookie used by email login.
 router.get('/github/callback', async (req, res) => {
-    const { code, state } = req.query;
-    const clientId = process.env.GITHUB_APP_CLIENT_ID;
-    const clientSecret = process.env.GITHUB_APP_CLIENT_SECRET;
-    const defaultClientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+    let configuration;
+    try {
+        configuration = getGitHubOAuthConfiguration();
+    } catch (err) {
+        console.error('[AUTH-GITHUB] Invalid OAuth URL configuration', err);
+        return res.status(500).json({ error: 'GitHub authentication is not configured' });
+    }
 
-    console.log('\n================== [AUTH-GITHUB-CALLBACK] RECEIVED ==================');
-    console.log('[AUTH-GITHUB-CALLBACK] URL:', req.originalUrl);
-    console.log('[AUTH-GITHUB-CALLBACK] Query params:', {
-        code: typeof code === 'string' ? `${code.slice(0, 10)}...` : code,
-        state: state
-    });
-    console.log('[AUTH-GITHUB-CALLBACK] Cookies:', req.cookies);
+    const state = req.query.state;
+    const savedState = req.cookies.github_oauth_state as string | undefined;
+    const savedVerifier = req.cookies.github_oauth_verifier as string | undefined;
+    const savedRedirect = req.cookies.github_client_redirect as string | undefined;
+    let redisOAuth: PendingGitHubOAuth | null = null;
 
-    let redisRedirect: string | null = null;
     if (typeof state === 'string') {
         try {
-            redisRedirect = await redis.get(`oauth:github:${state}`);
-            console.log('[AUTH-GITHUB-CALLBACK] Redis state lookup result:', redisRedirect);
-            if (redisRedirect) {
-                await redis.del(`oauth:github:${state}`);
-            }
-        } catch (redisErr) {
-            console.warn('[AUTH-GITHUB-CALLBACK] Failed to get OAuth state from Redis:', redisErr);
+            redisOAuth = readPendingOAuth(await redis.get(`oauth:github:${state}`));
+        } catch (err) {
+            console.warn('[AUTH-GITHUB] Could not read OAuth request', err);
         }
     }
 
-    const savedState = req.cookies.github_oauth_state as string | undefined;
-    const savedRedirect = req.cookies.github_client_redirect as string | undefined;
-    const targetClientUrl = redisRedirect || savedRedirect || defaultClientUrl;
+    const validRedisState = Boolean(redisOAuth && statesMatch(redisOAuth.state, state));
+    const validCookieState = Boolean(savedVerifier && statesMatch(savedState, state));
+    const targetClientUrl = resolveClientRedirect(
+        validRedisState ? redisOAuth?.clientUrl : savedRedirect,
+        configuration.clientUrl,
+    );
+    const codeVerifier = validRedisState ? redisOAuth?.codeVerifier : savedVerifier;
 
-    console.log('[AUTH-GITHUB-CALLBACK] Target redirect client URL:', targetClientUrl);
-
-    if (!clientId || !clientSecret) {
-        console.error('[AUTH-GITHUB-CALLBACK] ERROR: GitHub credentials missing in env', { hasClientId: Boolean(clientId), hasClientSecret: Boolean(clientSecret) });
-        return res.redirect(`${targetClientUrl}?github_auth=error&message=${encodeURIComponent('GitHub authentication is not configured')}`);
+    if (!validRedisState && !validCookieState) {
+        console.warn('[AUTH-GITHUB] Rejected callback with invalid OAuth state');
+        return authRedirect(res, targetClientUrl, 'error', 'Invalid GitHub authentication state');
     }
 
-    const isStateValid = Boolean(redisRedirect) || (typeof state === 'string' && typeof savedState === 'string' && state === savedState);
-    console.log('[AUTH-GITHUB-CALLBACK] State validation:', { isStateValid, hasRedisRedirect: Boolean(redisRedirect), matchesCookie: Boolean(savedState && state === savedState) });
-
-    if (typeof code !== 'string' || !isStateValid) {
-        console.error('[AUTH-GITHUB-CALLBACK] State validation failed!', { state, savedState, hasRedisRedirect: Boolean(redisRedirect) });
-        return res.redirect(`${targetClientUrl}?github_auth=error&message=${encodeURIComponent('Invalid GitHub authentication state')}`);
+    if (typeof state === 'string' && validRedisState) {
+        try {
+            await redis.del(`oauth:github:${state}`);
+        } catch (err) {
+            console.warn('[AUTH-GITHUB] Could not consume OAuth state', err);
+        }
     }
 
-    const callbackRedirectUri = `${process.env.API_BASE_URL || 'http://localhost:5000'}/auth/github/callback`;
+    if (!configuration.clientId || !configuration.clientSecret || !codeVerifier) {
+        console.error('[AUTH-GITHUB] OAuth credentials are not configured');
+        return clearAndRedirect(res, targetClientUrl, 'GitHub authentication is not configured');
+    }
+
+    if (typeof req.query.error === 'string') {
+        return clearAndRedirect(res, targetClientUrl, 'GitHub authorization was cancelled');
+    }
+
+    const code = req.query.code;
+    if (typeof code !== 'string') {
+        return clearAndRedirect(res, targetClientUrl, 'GitHub did not return an authorization code');
+    }
 
     try {
-        console.log('[AUTH-GITHUB-CALLBACK] Exchanging code for access token with GitHub...');
-        console.log('[AUTH-GITHUB-CALLBACK] Token exchange request payload:', {
-            client_id: clientId,
-            client_secret: clientSecret ? `${clientSecret.slice(0, 4)}...${clientSecret.slice(-4)}` : undefined,
-            code: typeof code === 'string' ? `${code.slice(0, 10)}...` : code,
-            redirect_uri: callbackRedirectUri,
-        });
-
         const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
             method: 'POST',
             headers: {
@@ -149,140 +201,113 @@ router.get('/github/callback', async (req, res) => {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                client_id: clientId,
-                client_secret: clientSecret,
+                client_id: configuration.clientId,
+                client_secret: configuration.clientSecret,
                 code,
-                redirect_uri: callbackRedirectUri,
+                redirect_uri: configuration.callbackUrl,
+                code_verifier: codeVerifier,
             }),
         });
-        const tokenData = await tokenResponse.json() as { 
+        const tokenData = await tokenResponse.json().catch(() => ({})) as {
             access_token?: string;
-            error?: string;
-            error_description?: string;
         };
 
-        console.log('[AUTH-GITHUB-CALLBACK] Token response status:', tokenResponse.status);
-        console.log('[AUTH-GITHUB-CALLBACK] Token response data:', tokenData);
-
         if (!tokenResponse.ok || !tokenData.access_token) {
-            console.error('[AUTH-GITHUB-CALLBACK] GitHub token exchange error response:', tokenData);
-            const errMsg = tokenData.error_description || tokenData.error || 'GitHub token exchange failed';
-            return res.redirect(`${targetClientUrl}?github_auth=error&message=${encodeURIComponent(errMsg)}`);
+            console.error('[AUTH-GITHUB] Token exchange failed', { status: tokenResponse.status });
+            return clearAndRedirect(res, targetClientUrl, 'GitHub token exchange failed');
         }
 
-        console.log('[AUTH-GITHUB-CALLBACK] Successfully acquired access token. Fetching GitHub user profile...');
         const githubHeaders = {
             Accept: 'application/vnd.github+json',
             Authorization: `Bearer ${tokenData.access_token}`,
             'X-GitHub-Api-Version': '2022-11-28',
         };
         const profileResponse = await fetch('https://api.github.com/user', { headers: githubHeaders });
-        const profile = await profileResponse.json() as {
+        const profile = await profileResponse.json().catch(() => ({})) as {
             id?: number;
             login?: string;
             name?: string | null;
             email?: string | null;
         };
 
-        console.log('[AUTH-GITHUB-CALLBACK] GitHub profile response status:', profileResponse.status);
-        console.log('[AUTH-GITHUB-CALLBACK] Profile data:', profile);
-
         if (!profileResponse.ok || !profile.id || !profile.login) {
-            console.error('[AUTH-GITHUB-CALLBACK] Failed to read GitHub profile:', profile);
-            return res.redirect(`${targetClientUrl}?github_auth=error&message=${encodeURIComponent('Could not read GitHub profile')}`);
+            console.error('[AUTH-GITHUB] Profile lookup failed', { status: profileResponse.status });
+            return clearAndRedirect(res, targetClientUrl, 'Could not read GitHub profile');
         }
 
         let email = profile.email?.trim().toLowerCase() || null;
         if (!email) {
-            console.log('[AUTH-GITHUB-CALLBACK] Public email not present on profile, requesting /user/emails...');
             const emailsResponse = await fetch('https://api.github.com/user/emails', { headers: githubHeaders });
             if (emailsResponse.ok) {
-                const emails = await emailsResponse.json() as Array<{ email?: string; primary?: boolean; verified?: boolean }>;
-                console.log('[AUTH-GITHUB-CALLBACK] User emails fetched:', emails);
+                const emails = await emailsResponse.json().catch(() => []) as Array<{
+                    email?: string;
+                    primary?: boolean;
+                    verified?: boolean;
+                }>;
                 email = emails.find((entry) => entry.primary && entry.verified)?.email?.trim().toLowerCase()
                     || emails.find((entry) => entry.verified)?.email?.trim().toLowerCase()
                     || null;
             }
         }
-        console.log('[AUTH-GITHUB-CALLBACK] Final resolved user email:', email);
+
+        if (!email) {
+            return clearAndRedirect(res, targetClientUrl, 'GitHub did not provide a verified email address');
+        }
 
         const githubId = String(profile.id);
-        console.log('[AUTH-GITHUB-CALLBACK] Searching database for user with githubID:', githubId, 'or email:', email);
-        const existingUsers = await db.select().from(users).where(eq(users.githubID, githubId));
-        const emailUser = email
-            ? await db.select().from(users).where(eq(users.email, email))
-            : [];
-        const existingUser = existingUsers[0] || emailUser[0];
+        const [githubUser] = await db.select().from(users).where(eq(users.githubID, githubId));
+        const [emailUser] = await db.select().from(users).where(eq(users.email, email));
 
-        let userRecord;
-        if (existingUser) {
-            console.log('[AUTH-GITHUB-CALLBACK] Found existing user:', existingUser.id, 'Updating record...');
-            userRecord = (await db.update(users).set({
-                name: profile.name?.trim() || profile.login,
-                email: email || existingUser.email || null,
-                githubID: githubId,
-                githubProfile: profile.login,
-                loginMethod: 'github',
-                lastLoginAt: new Date(),
-            }).where(eq(users.id, existingUser.id)).returning({ id: users.id, name: users.name, email: users.email }))[0];
-        } else {
-            console.log('[AUTH-GITHUB-CALLBACK] No existing user found. Creating new user record...');
-            userRecord = (await db.insert(users).values({
-                name: profile.name?.trim() || profile.login,
-                email,
-                githubID: githubId,
-                githubProfile: profile.login,
-                loginMethod: 'github',
+        if (githubUser && emailUser && githubUser.id !== emailUser.id) {
+            console.warn('[AUTH-GITHUB] GitHub identity and email resolve to different accounts');
+            return clearAndRedirect(res, targetClientUrl, 'This GitHub account conflicts with an existing account');
+        }
+
+        const existingUser = githubUser || emailUser;
+        if (existingUser?.githubID && String(existingUser.githubID) !== githubId) {
+            console.warn('[AUTH-GITHUB] Refused to replace an existing GitHub account link');
+            return clearAndRedirect(res, targetClientUrl, 'This email is already linked to another GitHub account');
+        }
+
+        const userValues = {
+            name: profile.name?.trim() || profile.login,
+            email,
+            githubID: githubId,
+            githubProfile: profile.login,
+            loginMethod: 'github' as const,
+            lastLoginAt: new Date(),
+        };
+        const userRecord = existingUser
+            ? (await db.update(users).set(userValues).where(eq(users.id, existingUser.id)).returning({
+                id: users.id,
+            }))[0]
+            : (await db.insert(users).values({
+                ...userValues,
                 isActive: true,
                 emailNotification: true,
-            }).returning({ id: users.id, name: users.name, email: users.email }))[0];
-        }
-
-        console.log('[AUTH-GITHUB-CALLBACK] Database user record:', userRecord);
+            }).returning({ id: users.id }))[0];
 
         if (!userRecord) {
-            console.error('[AUTH-GITHUB-CALLBACK] Database insert/update returned no user record!');
-            return res.redirect(`${targetClientUrl}?github_auth=error&message=${encodeURIComponent('Could not create user account')}`);
+            console.error('[AUTH-GITHUB] User upsert returned no record');
+            return clearAndRedirect(res, targetClientUrl, 'Could not create user account');
         }
 
-        const userAgent = {
+        const sessionToken = await createSession(userRecord.id, {
             browser: req.useragent?.browser,
             os: req.useragent?.os,
             platform: req.useragent?.platform,
-        };
-        console.log('[AUTH-GITHUB-CALLBACK] Creating session for user ID:', userRecord.id, 'userAgent:', userAgent);
-        const sessionToken = await createSession(userRecord.id, userAgent);
-        console.log('[AUTH-GITHUB-CALLBACK] Session created result:', sessionToken);
-
+        });
         if (!sessionToken) {
-            console.error('[AUTH-GITHUB-CALLBACK] Failed to create session!');
-            return res.redirect(`${targetClientUrl}?github_auth=error&message=${encodeURIComponent('Could not create session')}`);
+            console.error('[AUTH-GITHUB] Session creation failed');
+            return clearAndRedirect(res, targetClientUrl, 'Could not create session');
         }
 
-        const redirectUrl = new URL(targetClientUrl);
-        redirectUrl.searchParams.set('github_auth', 'success');
-        redirectUrl.searchParams.set('session_id', sessionToken);
-        redirectUrl.searchParams.set('user_id', userRecord.id);
-        redirectUrl.searchParams.set('user_name', userRecord.name);
-        if (userRecord.email) {
-            redirectUrl.searchParams.set('user_email', userRecord.email);
-        }
-
-        console.log('[AUTH-GITHUB-CALLBACK] SUCCESS! Redirecting user to client:', redirectUrl.toString());
-        console.log('=====================================================================\n');
-
-        return res
-            .clearCookie('github_oauth_state')
-            .clearCookie('github_client_redirect')
-            .cookie('session', sessionToken, sessionCookieOptions)
-            .cookie('sessionId', sessionToken, sessionCookieOptions)
-            .redirect(redirectUrl.toString());
+        return clearOAuthCookies(res)
+            .cookie('session', sessionToken, cookieOptions(30 * 24 * 60 * 60 * 1000))
+            .redirect(authRedirectUrl(targetClientUrl, 'success'));
     } catch (err) {
-        console.error('=====================================================================');
-        console.error('[AUTH-GITHUB-CALLBACK] EXCEPTION DURING GITHUB CALLBACK:', err);
-        console.error('=====================================================================');
-        const errMessage = err instanceof Error ? err.message : 'GitHub authentication failed';
-        return res.redirect(`${targetClientUrl}?github_auth=error&message=${encodeURIComponent(errMessage)}`);
+        console.error('[AUTH-GITHUB] Callback failed', err);
+        return clearAndRedirect(res, targetClientUrl, 'GitHub authentication failed');
     }
 });
 

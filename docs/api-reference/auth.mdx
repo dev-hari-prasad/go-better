@@ -2,10 +2,18 @@
 title: 'Authentication API'
 sidebarTitle: 'Authentication'
 icon: 'shield-halved'
-description: 'Endpoints for registration, login, OTP verification, sessions, and revocation'
+description: 'Endpoints for registration, GitHub OAuth login, OTP verification, sessions, and revocation'
 ---
 
 All authentication endpoints are mounted under `/auth`.
+
+## GitHub OAuth login
+
+`GET /auth/github` starts the GitHub OAuth authorization-code flow. The client may include `redirect_uri`, but its origin must exactly match `CLIENT_URL`; otherwise the backend returns the user to `CLIENT_URL`.
+
+The backend redirects to GitHub with a random flow state, PKCE challenge, and the `user:email` OAuth permission. Configure the OAuth App callback URL as `<API_BASE_URL>/auth/github/callback`. The callback exchanges the code server-side, then redirects to the client with only `github_auth=success` or `github_auth=error`. The session itself stays in an HTTP-only cookie and is never included in the redirect URL.
+
+For a GitHub App user-access-token integration rather than an OAuth App, set `GITHUB_OAUTH_SCOPE` to an empty value and grant the app's **Email addresses: Read-only** user permission in GitHub.
 
 ## Endpoints
 

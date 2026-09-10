@@ -256,34 +256,13 @@ export const App: React.FC = () => {
       console.log('[AUTH-CLIENT] Detected github_auth in URL search params:', {
         github_auth: params.get('github_auth'),
         message: params.get('message'),
-        session_id: params.get('session_id'),
-        user_id: params.get('user_id'),
-        user_name: params.get('user_name'),
-        user_email: params.get('user_email'),
       });
     }
 
     if (params.get('github_auth') === 'success') {
-      const sessionId = params.get('session_id');
-      const userId = params.get('user_id');
-      const userName = params.get('user_name');
-      const userEmail = params.get('user_email');
-
-      console.log('[AUTH-CLIENT] GitHub auth success received! Saving credentials to localStorage.');
-
-      if (sessionId) {
-        localStorage.setItem('session_id', sessionId);
-      }
-      if (userId) {
-        localStorage.setItem('user_db_id', userId);
-        localStorage.setItem('user_id', userId);
-      }
-      if (userName) {
-        localStorage.setItem('user_profile_name', userName);
-      }
-      if (userEmail) {
-        localStorage.setItem('user_profile_email', userEmail);
-      }
+      // The backend establishes the session in an HTTP-only cookie. Do not
+      // accept a credential or user profile from the redirect URL.
+      localStorage.removeItem('session_id');
       localStorage.setItem('user_auth_provider', 'github');
       localStorage.setItem('last_used_auth_method', 'github');
       localStorage.setItem('showMarketingPopup', 'false');

@@ -34,7 +34,7 @@ This reads `copy-env-config.json` and copies `src/.env.example` to `src/.env`. T
 | **Custom AI Endpoint Gateway** | `AI_BASE_URL` | `backend/src/.env` or Compose | Provider-specific |
 | **OpenAI Client Invocation Method**| `OPEN_AI_INTERFACE` | `backend/src/.env` or Compose | `chat` |
 | **Email Delivery (Resend API)** | `RESEND_API_KEY` | `backend/src/.env` or Compose | Unset / None |
-| **GitHub Integration** | `GITHUB_ACESSES_TOKEN`, `GITHUB_APP_*`, `GITHUB_WEBHOOK_VERIFICATION_SECRET` | `backend/src/.env` or Compose | Unset / None |
+| **GitHub Integration** | `GITHUB_ACESSES_TOKEN`, `GITHUB_OAUTH_*`, `GITHUB_APP_SLUG`, `GITHUB_WEBHOOK_VERIFICATION_SECRET` | `backend/src/.env` or Compose | Unset / None |
 | **Encryption & Auth** | `API_ENCRYPTION_KEY`, `BETTER_AUTH_URL` | `backend/src/.env` or Compose | Unset / None |
 | **Per-User Free Spend Allowance** | `perUserSpendLimit` | `backend/src/config/config.ts` | `$0.30` USD |
 | **Platform Free Model Pricing** | `goBetterFreeModels` | `backend/src/config/config.ts` | Model price map |
@@ -64,8 +64,9 @@ Create the backend file from `backend/src/.env.example` and replace every `YOUR_
 | `API_BASE_URL` | Yes for GitHub callbacks | Set this to the public backend origin, such as `http://localhost:5000` or `https://api.example.com`. **Public configuration.** |
 | `BETTER_AUTH_URL` | Yes for hosted auth | Set this to the backend's public origin. It normally matches `API_BASE_URL`. **Public configuration.** |
 | `RESEND_API_KEY` | Yes for email | Create an API key in the Resend dashboard. Verify the sending domain and sender address first. |
-| `GITHUB_APP_CLIENT_ID` | Yes for GitHub login | Create or open a GitHub OAuth App and copy its Client ID. Set its callback URL to `<API_BASE_URL>/auth/github/callback`. |
-| `GITHUB_APP_CLIENT_SECRET` | Yes for GitHub login | Copy or generate the Client secret from the same GitHub OAuth App. Store it only in the backend environment. |
+| `GITHUB_OAUTH_CLIENT_ID` | Yes for GitHub login | Create or open a GitHub OAuth App and copy its Client ID. Set its callback URL to `<API_BASE_URL>/auth/github/callback`. |
+| `GITHUB_OAUTH_CLIENT_SECRET` | Yes for GitHub login | Copy or generate the Client secret from the same GitHub OAuth App. Store it only in the backend environment. |
+| `GITHUB_OAUTH_SCOPE` | Yes for GitHub OAuth Apps | Set to `user:email`. The login flow uses it to retrieve a private primary email address. |
 | `GITHUB_APP_SLUG` | Yes for GitHub App links | Copy the slug from the GitHub App installation URL or app settings. |
 | `GITHUB_WEBHOOK_VERIFICATION_SECRET` | Yes for GitHub webhooks | Create a strong random secret in the GitHub webhook settings and configure the same value in the backend environment. GitHub uses it to generate the `X-Hub-Signature-256` header. |
 
@@ -243,7 +244,8 @@ CLIENT_URL="YOUR_VALUE_HERE"
 API_BASE_URL="YOUR_VALUE_HERE"
 BETTER_AUTH_URL="YOUR_VALUE_HERE"
 RESEND_API_KEY="YOUR_VALUE_HERE"
-GITHUB_APP_CLIENT_ID="YOUR_VALUE_HERE"
-GITHUB_APP_CLIENT_SECRET="YOUR_VALUE_HERE"
+GITHUB_OAUTH_CLIENT_ID="YOUR_VALUE_HERE"
+GITHUB_OAUTH_CLIENT_SECRET="YOUR_VALUE_HERE"
+GITHUB_OAUTH_SCOPE="user:email"
 GITHUB_APP_SLUG="YOUR_VALUE_HERE"
 ```

@@ -21,6 +21,7 @@ import {
   resetPassword,
   getCurrentSession,
 } from '../../services/authApi';
+import { useAuth } from '../../context/AuthContext';
 
 export type AuthMode = 'signup' | 'login' | 'forgot-password' | 'reset-password';
 type AuthStep = 'form' | 'otp_verify' | 'forgot_password' | 'verify_forgot_password' | 'reset_password';
@@ -40,6 +41,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   onModeChange,
   onAuthSuccess,
 }) => {
+  const { isAuthenticated } = useAuth();
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [step, setStep] = useState<AuthStep>('form');
   const [email, setEmail] = useState('');
@@ -192,7 +194,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
   }, [step]);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen && isAuthenticated) {
+      onClose();
+      if (['/login', '/signup', '/forgot-password', '/reset-password'].includes(window.location.pathname)) {
+        window.history.replaceState({ tab: 'overview' }, '', '/dashboard');
+      }
+    }
+  }, [isOpen, isAuthenticated, onClose]);
+
+  if (!isOpen || isAuthenticated) return null;
 
   // Handle GitHub Continue
   const handleGitHubAuth = () => {

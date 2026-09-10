@@ -1,5 +1,5 @@
 import 
-    { pgTable, uuid, primaryKey, varchar, timestamp, boolean, pgEnum, numeric }
+    { pgTable, uuid, primaryKey, varchar, timestamp, boolean, pgEnum, numeric, text }
 from 'drizzle-orm/pg-core'
 
 // Enums
@@ -16,6 +16,8 @@ const users = pgTable("users", {
     loginMethod: loginMethods('login_method').notNull(),
     githubProfile: varchar("github_profile").unique(),
     githubID: numeric('github_id').unique(),
+    githubAccessToken: text('github_access_token'),
+    isGithubConnected: boolean('is_github_connected').default(false).notNull(),
     isActive: boolean().default(true).notNull(),
     lastLoginAt: timestamp('last_login_at', { withTimezone: true }).defaultNow().notNull(),
     emailNotification: boolean('email_notifications_enabled').default(true).notNull(),

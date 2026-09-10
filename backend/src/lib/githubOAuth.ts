@@ -90,6 +90,7 @@ export function statesMatch(expected: string | undefined, received: unknown): bo
 export function buildGitHubAuthorizationUrl(
     configuration: GitHubOAuthConfiguration,
     request: GitHubOAuthRequest,
+    customScope?: string,
 ): string {
     if (!configuration.clientId) {
         throw new Error('GitHub OAuth client ID is not configured');
@@ -101,8 +102,9 @@ export function buildGitHubAuthorizationUrl(
     authorizeUrl.searchParams.set('state', request.state);
     authorizeUrl.searchParams.set('code_challenge', getCodeChallenge(request.codeVerifier));
     authorizeUrl.searchParams.set('code_challenge_method', 'S256');
-    if (configuration.scope.trim()) {
-        authorizeUrl.searchParams.set('scope', configuration.scope.trim());
+    const effectiveScope = customScope !== undefined ? customScope : configuration.scope;
+    if (effectiveScope.trim()) {
+        authorizeUrl.searchParams.set('scope', effectiveScope.trim());
     }
 
     return authorizeUrl.toString();

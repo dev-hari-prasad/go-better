@@ -4,6 +4,8 @@ import { SlidersHorizontal, X, Table, LayoutList, GitPullRequest, ArrowRight, Fo
 import { PullRequest, ReviewStatus } from '../../types/codeReview';
 import { fetchPullRequestList, getAuthUserId } from '../../services/pullRequestApi';
 import { Card } from '../ui/Card';
+import { GitHubDark, GitHubLight } from '@ridemountainpig/svgl-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface PullRequestsListViewProps {
   pullRequests: PullRequest[];
@@ -193,6 +195,7 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({
   initialStatusFilter = 'all',
   onStatusFilterChange,
 }) => {
+  const { isAuthenticated, isGithubConnected, connectGitHub } = useAuth();
   const [apiPullRequests, setApiPullRequests] = useState<PullRequest[] | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -488,6 +491,35 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({
           </div>
         </div>
       </div>
+
+      {/* GitHub Not Connected Banner */}
+      {isAuthenticated && !isGithubConnected && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-gradient-to-r from-[#161b22] to-[#1c2128] border border-[#30363d] shadow-sm animate-apple-fade">
+          <div className="flex items-start sm:items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#21262d] border border-[#30363d] flex items-center justify-center shrink-0 text-zinc-300">
+              <GitHubDark className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-100 flex items-center gap-2">
+                Connect your GitHub account
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                  Required for automated PRs
+                </span>
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Link your GitHub account to enable automated pull request reviews, repository syncing, and AI-driven PR updates.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={connectGitHub}
+            className="flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg bg-[#c0f200] hover:bg-[#d2ff3d] text-black text-xs font-semibold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] shrink-0"
+          >
+            <GitHubLight className="w-3.5 h-3.5 shrink-0" />
+            <span>Connect GitHub</span>
+          </button>
+        </div>
+      )}
 
       {/* API status banner */}
       {fetchError && (

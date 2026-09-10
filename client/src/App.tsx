@@ -132,23 +132,36 @@ export const App: React.FC = () => {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isSearchOpen, setIsSearchOpen] = useState<boolean>(false);
   const [isGlobalModelPickerOpen, setIsGlobalModelPickerOpen] = useState<boolean>(false);
+  const isStoredAuthed = typeof window !== 'undefined' && (
+    localStorage.getItem('showMarketingPopup') === 'false' ||
+    Boolean(localStorage.getItem('session_id')) ||
+    Boolean(localStorage.getItem('user_db_id'))
+  );
   const [isLandingModalOpen, setIsLandingModalOpen] = useState<boolean>(() => {
-    if (initialRoute.authMode) return false;
+    if (initialRoute.authMode || isStoredAuthed) return false;
     return localStorage.getItem('showMarketingPopup') !== 'false';
   });
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(() => Boolean(initialRoute.authMode));
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(() => {
+    if (isStoredAuthed) return false;
+    return Boolean(initialRoute.authMode);
+  });
   const [authModalMode, setAuthModalMode] = useState<AuthMode>(() => initialRoute.authMode || 'signup');
   const [isScanning, setIsScanning] = useState<boolean>(false);
   const [scanStep, setScanStep] = useState<string>('');
 
-  // Keep isLandingModalOpen synchronized with auth status
+  // Keep isLandingModalOpen synchronized with auth status and redirect from auth routes
   useEffect(() => {
     if (isAuthenticated) {
       setIsLandingModalOpen(false);
-    } else if (!initialRoute.authMode) {
-      setIsLandingModalOpen(true);
+      localStorage.setItem('showMarketingPopup', 'false');
+      const route = parseRoute();
+      if (route.authMode) {
+        setIsAuthModalOpen(false);
+        setActiveTabState('overview');
+        window.history.replaceState({ tab: 'overview' }, '', '/dashboard');
+      }
     }
-  }, [isAuthenticated, initialRoute.authMode]);
+  }, [isAuthenticated]);
 
   // Route-aware active tab switcher: updates internal state and URL bar
   const setActiveTab = (
@@ -190,6 +203,13 @@ export const App: React.FC = () => {
         setPendingPrId(route.prId);
       }
       if (route.authMode) {
+        const isAuthed = isAuthenticated || localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'));
+        if (isAuthed) {
+          setIsAuthModalOpen(false);
+          setActiveTabState('overview');
+          window.history.replaceState({ tab: 'overview' }, '', '/dashboard');
+          return;
+        }
         setAuthModalMode(route.authMode);
         setIsAuthModalOpen(true);
         document.title =
@@ -232,13 +252,18 @@ export const App: React.FC = () => {
       window.removeEventListener('popstate', syncFromUrl);
       window.removeEventListener('app-route-change', syncFromUrl);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    const handleOpenLanding = () => setIsLandingModalOpen(true);
+    const handleOpenLanding = () => {
+      const isAuthed = isAuthenticated || localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'));
+      if (!isAuthed) {
+        setIsLandingModalOpen(true);
+      }
+    };
     window.addEventListener('open-landing-modal', handleOpenLanding);
     return () => window.removeEventListener('open-landing-modal', handleOpenLanding);
-  }, []);
+  }, [isAuthenticated]);
 
   // Sync active backend session with client credentials on mount
   useEffect(() => {
@@ -914,10 +939,10 @@ export const App: React.FC = () => {
 
       {/* Landing Page Marketing Modal */}
       <LandingModal
-        isOpen={isLandingModalOpen}
-        isAuthed={localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'))}
+        isOpen={isLandingModalOpen && !isAuthenticated}
+        isAuthed={isAuthenticated || localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'))}
         onClose={() => {
-          const isAuthed = localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'));
+          const isAuthed = isAuthenticated || localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id'));
           if (!isAuthed) {
             setAuthModalMode('signup');
             setIsAuthModalOpen(true);
@@ -926,6 +951,7 @@ export const App: React.FC = () => {
         }}
         isSidebarCollapsed={isSidebarCollapsed}
         onOpenAuth={(mode) => {
+          if (isAuthenticated) return;
           setAuthModalMode(mode);
           setIsLandingModalOpen(false);
           setIsAuthModalOpen(true);
@@ -936,10 +962,10 @@ export const App: React.FC = () => {
 
       {/* GoBetter Branded Authentication & Signup Modal */}
       <AuthModal
-        isOpen={isAuthModalOpen}
+        isOpen={isAuthModalOpen && !isAuthenticated}
         onClose={() => {
           setIsAuthModalOpen(false);
-          const isAuthed = localStorage.getItem('showMarketingPopup') === 'false';
+          const isAuthed = isAuthenticated || localStorage.getItem('showMarketingPopup') === 'false';
           if (!isAuthed) {
             setIsLandingModalOpen(true);
           }

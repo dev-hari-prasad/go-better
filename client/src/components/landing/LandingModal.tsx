@@ -19,6 +19,7 @@ import { ReviewComparisonTable } from './ReviewComparisonTable';
 import { navigateTo } from '../../router/routes';
 import { Squircle } from '@squircle-js/react';
 import { GitHubDark } from '@ridemountainpig/svgl-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface LandingModalProps {
   isOpen: boolean;
@@ -43,9 +44,11 @@ export const LandingModal: React.FC<LandingModalProps> = ({
   onOpenAuth,
   isAuthed: propIsAuthed,
 }) => {
+  const { isAuthenticated } = useAuth();
   const isAuthed = propIsAuthed ?? (
-    typeof window !== 'undefined' &&
-    (localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id')) || Boolean(localStorage.getItem('user_db_id')))
+    isAuthenticated ||
+    (typeof window !== 'undefined' &&
+    (localStorage.getItem('showMarketingPopup') === 'false' || Boolean(localStorage.getItem('session_id')) || Boolean(localStorage.getItem('user_db_id'))))
   );
 
   useEffect(() => {
@@ -88,7 +91,7 @@ export const LandingModal: React.FC<LandingModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || isAuthed) return null;
 
   const featureItems = [
     {

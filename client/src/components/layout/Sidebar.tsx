@@ -19,6 +19,7 @@ import { isPublicReposTabEnabled, subscribeToConfigChange } from '../../config/c
 import { fetchUserUsage, UsageData } from '../../services/usageApi';
 import { logout } from '../../services/authApi';
 import { toast } from 'sonner';
+import { useAuth } from '../../context/AuthContext';
 
 import { NavTab, TAB_TO_PATH } from '../../router/routes';
 export type { NavTab };
@@ -46,6 +47,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onSimulateReview,
   isScanning = false,
 }) => {
+  const { isAuthenticated, isGithubConnected, githubProfile, connectGitHub } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [userName, setUserName] = useState(() => localStorage.getItem('user_profile_name') || 'Alex Mercer');
@@ -476,44 +478,69 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span>Edit Profile</span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'signup' } }));
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-[#c0f200] hover:bg-[#c0f200]/10 transition-colors cursor-pointer"
-                >
-                  <GitHubDark className="w-3.5 h-3.5 shrink-0" />
-                  <span>Login/Sign up</span>
-                </button>
+                {isAuthenticated ? (
+                  isGithubConnected ? (
+                    <div className="w-full flex items-center justify-between px-2.5 py-1.5 rounded text-xs text-emerald-400 bg-emerald-500/10">
+                      <div className="flex items-center gap-2 truncate">
+                        <GitHubDark className="w-3.5 h-3.5 shrink-0" />
+                        <span className="truncate">GitHub: @{githubProfile || 'Connected'}</span>
+                      </div>
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setShowProfileMenu(false);
+                        connectGitHub();
+                      }}
+                      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-[#c0f200] hover:bg-[#c0f200]/10 transition-colors cursor-pointer"
+                    >
+                      <GitHubDark className="w-3.5 h-3.5 shrink-0" />
+                      <span>Connect GitHub</span>
+                    </button>
+                  )
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'signup' } }));
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-[#c0f200] hover:bg-[#c0f200]/10 transition-colors cursor-pointer"
+                  >
+                    <GitHubDark className="w-3.5 h-3.5 shrink-0" />
+                    <span>Login/Sign up</span>
+                  </button>
+                )}
 
-                <button
-                  onClick={async () => {
-                    setShowProfileMenu(false);
-                    try {
-                      await logout();
-                    } catch (err) {
-                      console.warn('Server logout failed:', err);
-                    }
-                    localStorage.removeItem('gobe-user-id');
-                    localStorage.removeItem('user_db_id');
-                    localStorage.removeItem('user_id');
-                    localStorage.removeItem('session_id');
-                    localStorage.removeItem('user_profile_name');
-                    localStorage.removeItem('user_profile_email');
-                    localStorage.removeItem('user_auth_provider');
-                    setUserName('Guest');
-                    setUserEmail('guest@gobetter.dev');
-                    window.dispatchEvent(new Event('user-profile-updated'));
-                    window.dispatchEvent(new Event('user-changed'));
-                    toast.info('Signed out successfully');
-                    window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login' } }));
-                  }}
-                  className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer"
-                >
-                  <ArrowRightOnRectangleIcon className="w-3.5 h-3.5" />
-                  <span>Logout</span>
-                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={async () => {
+                      setShowProfileMenu(false);
+                      try {
+                        await logout();
+                      } catch (err) {
+                        console.warn('Server logout failed:', err);
+                      }
+                      localStorage.removeItem('gobe-user-id');
+                      localStorage.removeItem('user_db_id');
+                      localStorage.removeItem('user_id');
+                      localStorage.removeItem('session_id');
+                      localStorage.removeItem('user_profile_name');
+                      localStorage.removeItem('user_profile_email');
+                      localStorage.removeItem('user_auth_provider');
+                      setUserName('Guest');
+                      setUserEmail('guest@gobetter.dev');
+                      window.dispatchEvent(new Event('user-profile-updated'));
+                      window.dispatchEvent(new Event('user-changed'));
+                      toast.info('Signed out successfully');
+                      window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { mode: 'login' } }));
+                    }}
+                    className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                  >
+                    <ArrowRightOnRectangleIcon className="w-3.5 h-3.5" />
+                    <span>Logout</span>
+                  </button>
+                )}
               </div>
             )}
           </div>

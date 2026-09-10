@@ -15,7 +15,8 @@ import {
   reviewRouter,
   workspaceRouter,
   usageRouter,
-  authRouter
+  authRouter,
+  repositoryRouter,
 } from './routes/index.ts'
 
 // Start background workers
@@ -74,6 +75,7 @@ app.use('/conversation', authMiddleware, conversationRouter)
 app.use('/review', authMiddleware, reviewRouter)
 app.use('/workspace', authMiddleware, workspaceRouter)
 app.use('/usage', authMiddleware, usageRouter)
+app.use('/repository', authMiddleware, repositoryRouter)
 app.use('/auth', authRouter)
 
 // Handle not found routes

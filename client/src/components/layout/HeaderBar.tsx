@@ -13,7 +13,8 @@ import { SeverityBadge } from '../ui/Badge';
 import { Github, GitPullRequest, Book, Plus } from 'lucide-react';
 import { ChatTeardrop } from '@phosphor-icons/react';
 import { GobeAiLogo } from '../ui/GobeAiLogo';
-import { GitHubDark } from '@ridemountainpig/svgl-react';
+import { GitHubDark, GitHubLight } from '@ridemountainpig/svgl-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface HeaderBarProps {
   currentTab: string;
@@ -47,6 +48,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onOpenLanding,
   onOpenAuth,
 }) => {
+  const { isAuthenticated, isGithubConnected, connectGitHub } = useAuth();
   const [showChatModal, setShowChatModal] = useState(false);
 
   // Quick Chat recent conversations (GET /conversation)
@@ -178,10 +180,16 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </div>
             <button
               type="button"
-              onClick={onOpenLanding}
+              onClick={() => {
+                if (isAuthenticated) {
+                  onTabChange?.('overview');
+                } else if (onOpenLanding) {
+                  onOpenLanding();
+                }
+              }}
               className="flex items-center gap-2 min-w-0 group/topbar-logo cursor-pointer select-none text-left bg-transparent border-0 p-0 focus:outline-none"
-              title="Open GoBetter AI Overview"
-              aria-label="Open GoBetter AI Overview"
+              title={isAuthenticated ? "Go to Dashboard" : "Open GoBetter AI Overview"}
+              aria-label={isAuthenticated ? "Go to Dashboard" : "Open GoBetter AI Overview"}
             >
               <GobeAiLogo className="w-5 h-5 shrink-0 transition-transform duration-200 group-hover/topbar-logo:scale-105" variant="brand" />
               <span className="text-xs font-semibold text-zinc-100 tracking-tight truncate flex-1 group-hover/topbar-logo:text-zinc-200 transition-colors">
@@ -191,9 +199,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </div>
         </div>
 
-        {/* Right section: User session indicator / Sign In and Quick Chat */}
+        {/* Right section: Connect GitHub (if not connected) / Sign In and Quick Chat */}
         <div className="flex items-center gap-2 justify-end">
-          {!(localStorage.getItem('showMarketingPopup') === 'false' && (userProfile.userId || userProfile.email)) && (
+          {!isAuthenticated ? (
             <div className="relative group flex items-center justify-center">
               <button
                 onClick={() => {
@@ -206,11 +214,29 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-[#c0f200] hover:bg-[#d2ff3d] text-black text-xs font-semibold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] group"
                 title="Sign in or link your account"
               >
-                <GitHubDark className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110" />
+                <GitHubLight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110" />
                 <span>Login/Sign up</span>
               </button>
             </div>
-          )}
+          ) : !isGithubConnected ? (
+            <div className="relative group/connect-gh flex items-center justify-center">
+              <button
+                onClick={connectGitHub}
+                className="flex items-center gap-1.5 px-3 h-8 rounded-lg bg-[#c0f200] hover:bg-[#d2ff3d] text-black text-xs font-semibold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] group"
+                aria-label="Connect GitHub for Automated PRs"
+              >
+                <GitHubLight className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Connect GitHub</span>
+              </button>
+              <div className="opacity-0 pointer-events-none group-hover/connect-gh:opacity-100 transition-opacity duration-200 absolute top-full right-0 mt-2 w-64 p-2.5 rounded-lg bg-[#161b22] border border-[#30363d] shadow-2xl z-50 text-[11px] leading-relaxed text-zinc-300">
+                <div className="font-semibold text-zinc-100 mb-1 flex items-center gap-1.5">
+                  <GitHubDark className="w-3 h-3 shrink-0 text-[#c0f200]" />
+                  <span>Connect GitHub</span>
+                </div>
+                Connect your GitHub account to enable automated pull request reviews, repository syncing, and AI-driven PR updates.
+              </div>
+            </div>
+          ) : null}
 
           <div ref={quickChatRef} className="relative group/quick-chat flex items-center justify-center">
             <button

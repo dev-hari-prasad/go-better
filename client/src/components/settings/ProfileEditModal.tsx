@@ -19,10 +19,19 @@ import {
   RefreshCw,
   Bell,
   Info,
+  ExternalLink,
+  FolderGit2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserAvatar } from '../ui/UserAvatar';
 import { AvatarStyleId } from '../../utils/avatarUtils';
+import { GitHubDark, GitHubLight } from '@ridemountainpig/svgl-react';
+import { useAuth } from '../../context/AuthContext';
+import {
+  fetchConnectedRepositories,
+  syncConnectedRepositories,
+  ConnectedRepository,
+} from '../../services/repositoryApi';
 import {
   resetPassword,
   logout,
@@ -40,6 +49,7 @@ interface ProfileEditModalProps {
 }
 
 export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose }) => {
+  const { isGithubConnected, githubProfile, connectGitHub } = useAuth();
   const [name, setName] = useState(() => localStorage.getItem('user_profile_name') || 'Alex Mercer');
   const [email, setEmail] = useState(() => localStorage.getItem('user_profile_email') || 'alexmercer@acme.io');
   const [avatarStyleId, setAvatarStyleId] = useState<AvatarStyleId>(() => (localStorage.getItem('user_avatar_style') as AvatarStyleId) || 'gradient-smooth');
@@ -48,6 +58,14 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
     return saved !== null ? saved === 'true' : true;
   });
   const [isSaving, setIsSaving] = useState(false);
+
+  // Connected GitHub Repositories state
+  const [repos, setRepos] = useState<ConnectedRepository[]>([]);
+  const [isLoadingRepos, setIsLoadingRepos] = useState(false);
+  const [isSyncingRepos, setIsSyncingRepos] = useState(false);
+  const [manageUrl, setManageUrl] = useState('https://github.com/settings/installations');
+  const [isGhConnected, setIsGhConnected] = useState(isGithubConnected);
+  const [ghUsername, setGhUsername] = useState<string | null>(githubProfile);
   
   // Password change state
   const [showPasswordSection, setShowPasswordSection] = useState(false);
@@ -87,6 +105,41 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
     }
   };
 
+  const loadRepos = async () => {
+    setIsLoadingRepos(true);
+    try {
+      const data = await fetchConnectedRepositories();
+      setRepos(data.repositories || []);
+      if (data.manageUrl) setManageUrl(data.manageUrl);
+      setIsGhConnected(data.isGithubConnected);
+      setGhUsername(data.githubProfile);
+    } catch (err) {
+      console.warn('Could not load repositories:', err);
+      setIsGhConnected(isGithubConnected);
+      setGhUsername(githubProfile);
+    } finally {
+      setIsLoadingRepos(false);
+    }
+  };
+
+  const handleSyncRepos = async () => {
+    setIsSyncingRepos(true);
+    try {
+      const res = await syncConnectedRepositories();
+      setRepos(res.repositories || []);
+      if (res.manageUrl) setManageUrl(res.manageUrl);
+      toast.success(res.message || 'Repositories synced from GitHub');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to sync repositories');
+    } finally {
+      setIsSyncingRepos(false);
+    }
+  };
+
+  const handleModifyOnGitHub = () => {
+    window.open(manageUrl || 'https://github.com/settings/installations', '_blank', 'noopener,noreferrer');
+  };
+
   useEffect(() => {
     if (isOpen) {
       setName(localStorage.getItem('user_profile_name') || 'Alex Mercer');
@@ -108,6 +161,7 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
       setShowDangerZone(false);
       setIsDeleting(false);
       setIsDeletingAccount(false);
+      void loadRepos();
     }
   }, [isOpen]);
 
@@ -372,6 +426,122 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
                 className="w-full bg-[#121319] border border-[#2d3340] rounded-xl px-3.5 py-2.5 text-sm text-zinc-200 focus:outline-none focus:border-[#c0f200]/50 focus:ring-1 focus:ring-[#c0f200]/50 transition-all shadow-inner placeholder:text-zinc-600"
               />
             </div>
+          </div>
+
+          {/* Connected GitHub & Repositories */}
+          <div className="p-4 rounded-2xl bg-[#121319] border border-[#232530] space-y-3.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-[#21262d] border border-[#30363d] flex items-center justify-center text-zinc-300 shrink-0">
+                  <GitHubDark className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="text-xs font-bold text-zinc-100">GitHub Repositories</h4>
+                    {isGhConnected ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        Connected: @{ghUsername || githubProfile || 'user'}
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        Not Connected
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                    Manage authorized repositories and review permissions. GoBetter respects your GitHub settings.
+                  </p>
+                </div>
+              </div>
+
+              {isGhConnected ? (
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={handleSyncRepos}
+                    disabled={isSyncingRepos}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#1a1b22] hover:bg-[#22242e] border border-[#2d3340] hover:border-zinc-500 text-zinc-300 hover:text-white transition-all cursor-pointer shadow-xs disabled:opacity-50"
+                    title="Refresh repository list from GitHub"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingRepos ? 'animate-spin text-[#c0f200]' : ''}`} />
+                    <span>{isSyncingRepos ? 'Syncing...' : 'Refresh'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleModifyOnGitHub}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-[#1a1b22] hover:bg-[#22242e] border border-[#2d3340] hover:border-[#c0f200]/50 text-zinc-300 hover:text-[#c0f200] transition-all cursor-pointer shadow-xs"
+                    title="Manage repository permissions directly on GitHub"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>Modify list on GitHub</span>
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={connectGitHub}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#c0f200] hover:bg-[#d2ff3d] text-black text-xs font-semibold transition-all cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98] shrink-0 self-start sm:self-auto"
+                >
+                  <GitHubLight className="w-3.5 h-3.5 shrink-0" />
+                  <span>Connect GitHub</span>
+                </button>
+              )}
+            </div>
+
+            {/* Repositories List */}
+            {isGhConnected && (
+              <div className="pt-2 border-t border-[#232530] space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-400">
+                  <span>Authorized Repositories ({repos.length})</span>
+                  <span className="text-[10px] font-normal text-zinc-500">GoBetter only accesses granted repos</span>
+                </div>
+
+                {isLoadingRepos ? (
+                  <div className="py-3 text-center text-xs text-zinc-500">Loading authorized repositories...</div>
+                ) : repos.length === 0 ? (
+                  <div className="py-3 px-3.5 rounded-xl bg-[#16171d] border border-white/5 text-xs text-zinc-500 text-center">
+                    No repositories connected yet. Click "Modify list on GitHub" to grant repository access.
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar pr-0.5">
+                    {repos.map((repo) => (
+                      <div
+                        key={repo.id || repo.repositoryId}
+                        className="flex items-center justify-between p-2 rounded-xl bg-[#16171d] border border-white/5 text-xs hover:border-white/10 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FolderGit2 className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                          <a
+                            href={repo.repositoryHTML}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-zinc-200 hover:text-[#c0f200] truncate transition-colors"
+                          >
+                            {repo.repositoryName}
+                          </a>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {repo.autoReviewActive && (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-semibold text-[#c0f200] bg-[#c0f200]/10 border border-[#c0f200]/20">
+                              Auto-Review
+                            </span>
+                          )}
+                          <a
+                            href={repo.repositoryHTML}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-zinc-500 hover:text-zinc-300 p-1"
+                            title="View on GitHub"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Email Notification Preferences & GitHub Two-Way Integration Notice */}

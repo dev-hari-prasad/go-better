@@ -19,6 +19,7 @@ import {
   logout as apiLogout,
   logoutAll as apiLogoutAll,
   deleteUserAccount as apiDeleteUserAccount,
+  redirectToGitHubAuth,
 } from '../services/authApi';
 
 export interface AuthUser {
@@ -33,6 +34,9 @@ export interface AuthContextType {
   session: UserSession | null;
   sessions: UserSession[];
   isAuthenticated: boolean;
+  isGithubConnected: boolean;
+  githubProfile: string | null;
+  githubID: string | null;
   isLoadingSession: boolean;
   login: (payload: LoginPayload) => Promise<AuthApiResponse>;
   signup: (payload: SignupPayload) => Promise<AuthApiResponse>;
@@ -46,6 +50,7 @@ export interface AuthContextType {
   refreshSession: () => Promise<UserSession | null>;
   refreshSessions: () => Promise<UserSession[]>;
   setGitHubUser: (user: { name: string; email: string; username: string }) => void;
+  connectGitHub: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -97,6 +102,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             localStorage.setItem('last_used_auth_method', activeSession.loginMethod);
           }
         }
+        if (activeSession.isGithubConnected !== undefined) {
+          localStorage.setItem('is_github_connected', String(Boolean(activeSession.isGithubConnected || activeSession.githubID)));
+        }
+        if (activeSession.githubProfile) {
+          localStorage.setItem('github_profile', activeSession.githubProfile);
+        }
+        localStorage.setItem('showMarketingPopup', 'false');
 
         setUser((prev) => {
           const email = activeSession.userEmail || localStorage.getItem('user_profile_email') || prev?.email || '';
@@ -338,6 +350,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user_profile_name');
     localStorage.removeItem('user_profile_email');
     localStorage.removeItem('user_auth_provider');
+    localStorage.removeItem('is_github_connected');
+    localStorage.removeItem('github_profile');
 
     window.dispatchEvent(new Event('user-profile-updated'));
     window.dispatchEvent(new Event('user-changed'));
@@ -366,6 +380,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user_profile_name');
     localStorage.removeItem('user_profile_email');
     localStorage.removeItem('user_auth_provider');
+    localStorage.removeItem('is_github_connected');
+    localStorage.removeItem('github_profile');
 
     window.dispatchEvent(new Event('user-profile-updated'));
     window.dispatchEvent(new Event('user-changed'));
@@ -397,6 +413,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.removeItem('user_auth_provider');
     localStorage.removeItem('user_login_method');
     localStorage.removeItem('user_avatar_style');
+    localStorage.removeItem('is_github_connected');
+    localStorage.removeItem('github_profile');
 
     window.dispatchEvent(new Event('user-profile-updated'));
     window.dispatchEvent(new Event('user-changed'));
@@ -411,6 +429,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem('user_profile_email', gitHubData.email);
     localStorage.setItem('user_auth_provider', 'github');
     localStorage.setItem('last_used_auth_method', 'github');
+    localStorage.setItem('is_github_connected', 'true');
+    localStorage.setItem('github_profile', gitHubData.username);
 
     setUser({
       id: gitHubData.username,
@@ -424,6 +444,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.dispatchEvent(new Event('user-changed'));
   }, []);
 
+  const isGithubConnected = Boolean(
+    session?.isGithubConnected ||
+    session?.githubID ||
+    (user && user.provider === 'github') ||
+    localStorage.getItem('is_github_connected') === 'true' ||
+    localStorage.getItem('user_auth_provider') === 'github'
+  );
+  const githubProfile = session?.githubProfile || localStorage.getItem('github_profile') || (user?.provider === 'github' ? user.name : null);
+  const githubID = session?.githubID || null;
+
+  const connectGitHub = useCallback(() => {
+    redirectToGitHubAuth({ intent: 'connect' });
+  }, []);
+
   return (
     <AuthContext.Provider
       value={{
@@ -431,6 +465,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         session,
         sessions,
         isAuthenticated,
+        isGithubConnected,
+        githubProfile,
+        githubID,
         isLoadingSession,
         login,
         signup,
@@ -444,6 +481,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         refreshSession,
         refreshSessions,
         setGitHubUser,
+        connectGitHub,
       }}
     >
       {children}

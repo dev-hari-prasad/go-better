@@ -30,6 +30,9 @@ export interface UserSession {
   userName?: string;
   userEmail?: string | null;
   loginMethod?: 'email' | 'github';
+  isGithubConnected?: boolean;
+  githubProfile?: string | null;
+  githubID?: string | null;
 }
 
 export interface SignupPayload {
@@ -441,4 +444,24 @@ export async function deleteUserAccount(): Promise<boolean> {
     console.warn('Failed to delete user account on server:', err);
     return false;
   }
+}
+
+/**
+ * 13. Redirects the browser to backend GitHub OAuth authorization flow
+ */
+export function redirectToGitHubAuth(options?: { intent?: 'login' | 'connect'; redirectUri?: string }): void {
+  const apiBase = import.meta.env.VITE_API_BASE_URL || 'https://api.gobetter.dev';
+  const targetRedirect = options?.redirectUri || window.location.origin;
+  const params = new URLSearchParams();
+  params.set('redirect_uri', targetRedirect);
+  if (options?.intent) {
+    params.set('intent', options.intent);
+  }
+  const sessionId = localStorage.getItem('session_id');
+  if (sessionId) {
+    params.set('session_id', sessionId);
+  }
+  const targetUrl = `${apiBase}/auth/github?${params.toString()}`;
+  console.log('[AUTH-CLIENT] Initiating GitHub auth redirect to:', targetUrl);
+  window.location.assign(targetUrl);
 }

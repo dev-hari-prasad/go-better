@@ -26,6 +26,8 @@ import {
     resolveClientRedirect,
     statesMatch,
 } from '../lib/githubOAuth.ts';
+import { encryptApiKey } from '../utils/encryptApi.ts';
+import { syncUserRepositories } from '../service/githubRepository.service.ts';
 
 const router: express.Router = express.Router()
 
@@ -36,6 +38,8 @@ type PendingGitHubOAuth = {
     state: string;
     codeVerifier: string;
     clientUrl: string;
+    userId?: string;
+    intent?: 'login' | 'connect';
 };
 
 function cookieOptions(maxAge: number) {
@@ -88,7 +92,9 @@ function clearOAuthCookies(res: express.Response) {
     return res
         .clearCookie('github_oauth_state')
         .clearCookie('github_oauth_verifier')
-        .clearCookie('github_client_redirect');
+        .clearCookie('github_client_redirect')
+        .clearCookie('github_connect_user_id')
+        .clearCookie('github_oauth_intent');
 }
 
 function clearAndRedirect(res: express.Response, clientUrl: string, message: string) {
@@ -116,8 +122,53 @@ router.get('/github', async (req, res) => {
         ? req.query.redirect_uri
         : undefined;
     const clientUrl = resolveClientRedirect(requestedRedirect, configuration.clientUrl);
+
+    let sessionId: string | undefined = req.cookies?.session || req.cookies?.sessionId;
+    if (!sessionId && typeof req.query.session_id === 'string') {
+        sessionId = req.query.session_id.trim();
+    }
+    if (!sessionId) {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            sessionId = authHeader.startsWith('Bearer ')
+                ? authHeader.slice(7).trim()
+                : authHeader.trim();
+        }
+    }
+    if (!sessionId && req.headers['x-session-id']) {
+        sessionId = String(req.headers['x-session-id']).trim();
+    }
+
+    let connectingUserId: string | undefined;
+    if (sessionId) {
+        try {
+            const sessionData = await redis.get(REDIS_KEYS.session(sessionId));
+            if (sessionData) {
+                const parsed = JSON.parse(sessionData);
+                if (Array.isArray(parsed) && parsed[0]?.userId) {
+                    connectingUserId = parsed[0].userId;
+                } else if (parsed?.userId) {
+                    connectingUserId = parsed.userId;
+                }
+            }
+            if (!connectingUserId) {
+                const [dbSession] = await db.select({ userId: session.userId }).from(session).where(eq(session.id, sessionId));
+                if (dbSession) {
+                    connectingUserId = dbSession.userId;
+                }
+            }
+        } catch (err) {
+            console.warn('[AUTH-GITHUB] Error reading session for connect intent', err);
+        }
+    }
+
+    const isConnect = req.query.intent === 'connect' || (Boolean(connectingUserId) && req.query.intent === 'connect');
     const oauthRequest = createGitHubOAuthRequest();
-    const pendingOAuth: PendingGitHubOAuth = { ...oauthRequest, clientUrl };
+    const pendingOAuth: PendingGitHubOAuth = {
+        ...oauthRequest,
+        clientUrl,
+        ...(isConnect && connectingUserId ? { userId: connectingUserId, intent: 'connect' } : {}),
+    };
 
     try {
         await redis.set(`oauth:github:${oauthRequest.state}`, JSON.stringify(pendingOAuth), 'EX', 600);
@@ -127,11 +178,19 @@ router.get('/github', async (req, res) => {
         console.warn('[AUTH-GITHUB] Could not cache OAuth request', err);
     }
 
-    return res
+    let response = res
         .cookie('github_oauth_state', oauthRequest.state, cookieOptions(OAUTH_COOKIE_MAX_AGE))
         .cookie('github_oauth_verifier', oauthRequest.codeVerifier, cookieOptions(OAUTH_COOKIE_MAX_AGE))
-        .cookie('github_client_redirect', clientUrl, cookieOptions(OAUTH_COOKIE_MAX_AGE))
-        .redirect(buildGitHubAuthorizationUrl(configuration, oauthRequest));
+        .cookie('github_client_redirect', clientUrl, cookieOptions(OAUTH_COOKIE_MAX_AGE));
+
+    if (isConnect && connectingUserId) {
+        response = response
+            .cookie('github_connect_user_id', connectingUserId, cookieOptions(OAUTH_COOKIE_MAX_AGE))
+            .cookie('github_oauth_intent', 'connect', cookieOptions(OAUTH_COOKIE_MAX_AGE));
+    }
+
+    const connectScope = process.env.GITHUB_CONNECT_SCOPE || 'repo,user:email';
+    return response.redirect(buildGitHubAuthorizationUrl(configuration, oauthRequest, isConnect ? connectScope : undefined));
 });
 
 // Exchange GitHub's temporary code, create/sign in the local user, and issue
@@ -149,6 +208,8 @@ router.get('/github/callback', async (req, res) => {
     const savedState = req.cookies.github_oauth_state as string | undefined;
     const savedVerifier = req.cookies.github_oauth_verifier as string | undefined;
     const savedRedirect = req.cookies.github_client_redirect as string | undefined;
+    const savedConnectUserId = req.cookies.github_connect_user_id as string | undefined;
+    const savedIntent = req.cookies.github_oauth_intent as string | undefined;
     let redisOAuth: PendingGitHubOAuth | null = null;
 
     if (typeof state === 'string') {
@@ -166,6 +227,8 @@ router.get('/github/callback', async (req, res) => {
         configuration.clientUrl,
     );
     const codeVerifier = validRedisState ? redisOAuth?.codeVerifier : savedVerifier;
+    const connectUserId = redisOAuth?.userId || (savedIntent === 'connect' ? savedConnectUserId : undefined);
+    const isConnectFlow = Boolean(connectUserId && (redisOAuth?.intent === 'connect' || savedIntent === 'connect'));
 
     if (!validRedisState && !validCookieState) {
         console.warn('[AUTH-GITHUB] Rejected callback with invalid OAuth state');
@@ -259,6 +322,54 @@ router.get('/github/callback', async (req, res) => {
         const [githubUser] = await db.select().from(users).where(eq(users.githubID, githubId));
         const [emailUser] = await db.select().from(users).where(eq(users.email, email));
 
+        if (isConnectFlow && connectUserId) {
+            const [targetUser] = await db.select().from(users).where(eq(users.id, connectUserId));
+            if (!targetUser) {
+                return clearAndRedirect(res, targetClientUrl, 'User account not found');
+            }
+
+            if (githubUser && githubUser.id !== connectUserId) {
+                console.warn('[AUTH-GITHUB] GitHub identity is already linked to another account');
+                return clearAndRedirect(res, targetClientUrl, 'This GitHub account is already connected to another user account');
+            }
+
+            if (targetUser.githubID && String(targetUser.githubID) !== githubId) {
+                console.warn('[AUTH-GITHUB] Refused to replace an existing GitHub account link');
+                return clearAndRedirect(res, targetClientUrl, 'Your account is already linked to a different GitHub account');
+            }
+
+            const encryptedToken = encryptApiKey(tokenData.access_token);
+
+            await db.update(users).set({
+                githubID: githubId,
+                githubProfile: profile.login,
+                githubAccessToken: encryptedToken,
+                isGithubConnected: true,
+                lastLoginAt: new Date(),
+            }).where(eq(users.id, connectUserId));
+
+            try {
+                await syncUserRepositories(connectUserId, tokenData.access_token);
+            } catch (repoErr) {
+                console.warn('[AUTH-GITHUB] Failed to sync repositories on connect:', repoErr);
+            }
+
+            let sessionToken = req.cookies?.session || req.cookies?.sessionId;
+            if (!sessionToken) {
+                sessionToken = await createSession(connectUserId, {
+                    browser: req.useragent?.browser,
+                    os: req.useragent?.os,
+                    platform: req.useragent?.platform,
+                });
+            }
+
+            let resBuilder = clearOAuthCookies(res);
+            if (sessionToken) {
+                resBuilder = resBuilder.cookie('session', sessionToken, cookieOptions(SESSION_COOKIE_MAX_AGE));
+            }
+            return resBuilder.redirect(authRedirectUrl(targetClientUrl, 'success', 'GitHub account connected successfully'));
+        }
+
         if (githubUser && emailUser && githubUser.id !== emailUser.id) {
             console.warn('[AUTH-GITHUB] GitHub identity and email resolve to different accounts');
             return clearAndRedirect(res, targetClientUrl, 'This GitHub account conflicts with an existing account');
@@ -270,12 +381,16 @@ router.get('/github/callback', async (req, res) => {
             return clearAndRedirect(res, targetClientUrl, 'This email is already linked to another GitHub account');
         }
 
+        const encryptedToken = encryptApiKey(tokenData.access_token);
+
         const userValues = {
             name: profile.name?.trim() || profile.login,
             email,
             githubID: githubId,
             githubProfile: profile.login,
+            githubAccessToken: encryptedToken,
             loginMethod: 'github' as const,
+            isGithubConnected: true,
             lastLoginAt: new Date(),
         };
         const userRecord = existingUser
@@ -291,6 +406,12 @@ router.get('/github/callback', async (req, res) => {
         if (!userRecord) {
             console.error('[AUTH-GITHUB] User upsert returned no record');
             return clearAndRedirect(res, targetClientUrl, 'Could not create user account');
+        }
+
+        try {
+            await syncUserRepositories(userRecord.id, tokenData.access_token);
+        } catch (repoErr) {
+            console.warn('[AUTH-GITHUB] Failed to sync repositories on login:', repoErr);
         }
 
         const sessionToken = await createSession(userRecord.id, {
@@ -889,14 +1010,26 @@ router.get('/session', async (req, res) => {
             userName: users.name,
             userEmail: users.email,
             loginMethod: users.loginMethod,
+            isGithubConnected: users.isGithubConnected,
+            githubProfile: users.githubProfile,
+            githubID: users.githubID,
         })
             .from(session)
             .innerJoin(users, eq(users.id, session.userId))
             .where(eq(session.id, sessionId));
 
-        return sessionInfo.length === 0
-            ? res.status(200).json({ authenticated: false })
-            : res.status(200).json({ authenticated: true, ...sessionInfo[0] });
+        const sess = sessionInfo[0];
+        if (!sess) {
+            return res.status(200).json({ authenticated: false });
+        }
+
+        return res.status(200).json({
+            authenticated: true,
+            ...sess,
+            isGithubConnected: Boolean(sess.isGithubConnected || sess.githubID),
+            githubProfile: sess.githubProfile ?? null,
+            githubID: sess.githubID ?? null,
+        });
     } catch(err){
         return res.status(500).json({
             error: API_RESPONSE_MESSAGES[500]

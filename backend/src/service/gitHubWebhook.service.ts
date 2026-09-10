@@ -1,19 +1,53 @@
 import pullRequests from "../database/schema/pullRequests.ts";
 import users from "../database/schema/users.ts";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "../database/dbClient.ts";
-import { diff } from "node:util";
-import z from "zod";
+
+export type GithubIdentity = {
+    id?: string | number | null;
+    login?: string | null;
+};
+
+export async function findGithubUser(identity: GithubIdentity) {
+    if (identity.id === undefined || identity.id === null) {
+        return undefined;
+    }
+
+    const [user] = await db
+        .select({ id: users.id, githubID: users.githubID })
+        .from(users)
+        .where(eq(users.githubID, String(identity.id)))
+        .limit(1);
+
+    return user;
+}
+
+export async function assertPullRequestOwner(
+    pullRequestDbId: string,
+    identity: GithubIdentity,
+) {
+    const [owner] = await db
+        .select({ userId: pullRequests.userId, githubID: users.githubID })
+        .from(pullRequests)
+        .innerJoin(users, eq(pullRequests.userId, users.id))
+        .where(eq(pullRequests.id, pullRequestDbId))
+        .limit(1);
+
+    if (!owner || String(owner.githubID) !== String(identity.id)) {
+        throw new Error("GitHub user does not own this pull request");
+    }
+
+    return owner.userId;
+}
 
 // Func to Insert webhook data to databse 
 export async function webhookToDatabase(payload: any){  
-    
-    const [selectedUserId] = await db
-        .select({ userId: users.id })
-        .from(users)
-        .where(eq(users.githubID, payload.pull_request.user?.id))
+    const selectedUser = await findGithubUser({
+        id: payload.pull_request.user?.id,
+        login: payload.pull_request.user?.login,
+    });
 
-    if (!selectedUserId) {
+    if (!selectedUser) {
         throw new Error("GitHub user not found");
     } 
     else 
@@ -26,7 +60,7 @@ export async function webhookToDatabase(payload: any){
                     : null);
 
             const pullRequestInsert = await db.insert(pullRequests).values({
-            userId: selectedUserId.userId,
+            userId: selectedUser.id,
             prId: payload.pull_request.id,
             repositoryId: payload.pull_request.head.repo?.id,
             number: payload.pull_request.number,

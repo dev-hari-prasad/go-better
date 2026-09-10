@@ -1,6 +1,7 @@
 import { log } from "node:console";
 import { Job, Worker } from "bullmq";
 import { connection , sanitizedPrPayload, deadLetter, workerOptions } from '../config/queue.ts'
+import { findGithubUser } from '../service/gitHubWebhook.service.ts'
 
 const worker = new Worker(
     "unprocessedWebhookPayload",
@@ -10,6 +11,15 @@ const worker = new Worker(
         const pullRequestDbId = job.data.pullRequestDbId
     
     try {
+        const githubUser = await findGithubUser({
+            id: payload.pull_request.user?.id,
+            login: payload.pull_request.user?.login,
+        });
+
+        if (!githubUser) {
+            throw new Error("GitHub user not found");
+        }
+
         log('satnsiztion request recived')
         const cleanPayload = {
         action: payload.action,

@@ -118,5 +118,13 @@
     "status": "planned",
     "priority": "high",
     "category": "Analytics"
+  },
+  {
+    "key": "#116",
+    "title": "Graceful Production Database Migrations",
+    "description": "Coordinate schema migrations when multiple Dockerized backend machines deploy at the same time, using a single migration runner or database-level lock so only one instance migrates.",
+    "status": "planned",
+    "priority": "high",
+    "category": "Database"
   }
 ]

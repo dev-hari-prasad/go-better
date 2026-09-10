@@ -2,6 +2,7 @@ import { Job, Worker } from 'bullmq'
 import { sanitizedPrPayload, extractedPrContent, connection, deadLetter, workerOptions } from '../config/queue.ts'
 
 import { log } from 'node:console'
+import { assertPullRequestOwner } from '../service/gitHubWebhook.service.ts'
 
 // Worker to extract info from urls such as diff
 export const worker = new Worker(
@@ -10,6 +11,10 @@ export const worker = new Worker(
         const sanitizedPayload = job.data
 
         try {
+            await assertPullRequestOwner(
+                sanitizedPayload.additionalInfo.pullRequestDbID,
+                sanitizedPayload.pull_request.author,
+            )
             
             
             // Inicaite request 

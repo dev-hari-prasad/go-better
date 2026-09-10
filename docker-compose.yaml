@@ -17,21 +17,21 @@ services:
       - goBetter
     
   # Optional frontend service 
-  # frontend:
-  #   build:
-  #     context: ./client
-  #     dockerfile: Dockerfile
-  #   image: go-better-frontend
-  #   ports:
-  #     - "3000:80"
-  #   environment:
-  #     NODE_ENV: production
-  #   env_file:
-  #     - path: ./client/.env
-  #       required: false
-  #   restart: unless-stopped
-  #   networks:
-  #     - goBetter
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    image: go-better-frontend
+    ports:
+      - "3000:80"
+    environment:
+      NODE_ENV: production
+    env_file:
+      - path: ./client/.env
+        required: false
+    restart: unless-stopped
+    networks:
+      - goBetter
 
 networks:
   goBetter:

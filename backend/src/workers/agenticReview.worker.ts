@@ -8,6 +8,7 @@ import pullRequests from "../database/schema/pullRequests.ts";
 import { eq } from "drizzle-orm";
 import { parseReview } from "../utils/parseReview.ts";
 import { aiGeneratetext } from "../service/ai.service.ts";
+import { assertPullRequestOwner } from "../service/gitHubWebhook.service.ts";
 
 // API key and gateway formation
 const apiKey = process.env.AI_API_KEY;
@@ -40,13 +41,10 @@ export const worker = new Worker(
                         throw new Error("Missing pullRequestDbID in job payload");
                 }
 
-                const [pullRequestOwner] = await db.select({ userId: pullRequests.userId })
-                    .from(pullRequests)
-                    .where(eq(pullRequests.id, pullRequestDbID))
-
-                if (!pullRequestOwner) {
-                    throw new Error("Pull request owner not found");
-                }
+                const pullRequestOwnerId = await assertPullRequestOwner(
+                    pullRequestDbID,
+                    pullRequest.author,
+                )
 
         const finalPrompt = JSON.stringify({
             reviewMode: REVIEW_MODES.DEEP_DIVE,
@@ -54,7 +52,7 @@ export const worker = new Worker(
         }, null, 2)
 
         // Review
-        const text = await aiGeneratetext(pullRequestOwner.userId, finalPrompt, CODE_REVIEW_SYSTEM_PROMPT)
+        const text = await aiGeneratetext(pullRequestOwnerId, finalPrompt, CODE_REVIEW_SYSTEM_PROMPT)
 
         log('review coemplted and now inserting to db')
 

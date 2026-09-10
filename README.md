@@ -4,6 +4,26 @@
 
 GoBetter intercepts GitHub pull requests, runs deep architectural and concurrency checks via background queues, and provides an interactive developer dashboard with chat, diff analysis, and Bring-Your-Own-Key (BYOK) model orchestration.
 
+## Deploy GoBetter
+
+GoBetter is a small two-part deployment: the React frontend is a static Vite app, while the Express API and BullMQ workers run together in the backend container. Redis and PostgreSQL remain shared infrastructure for queues, sessions, and application data.
+
+<p>
+    <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdev-hari-prasad%2Fgo-better&project-name=go-better&repository-name=go-better">
+        <img src="https://vercel.com/button" alt="Deploy frontend with Vercel" />
+    </a>
+    <a href="https://railway.com/new?repo=https%3A%2F%2Fgithub.com%2Fdev-hari-prasad%2Fgo-better">
+        <img src="https://railway.com/button.svg" alt="Deploy backend with Railway" />
+    </a>
+</p>
+
+### What the buttons do
+
+- **Vercel** creates a frontend project from this repository. The root `vercel.json` already points Vercel at `client`, runs the client build, and serves `client/dist`.
+- **Railway** creates a project from this repository. Set the service root directory to `backend` so Railway uses `backend/DockerFile` and starts the API with its workers.
+
+Both deployments still need their environment variables. Configure the client API URL in Vercel, and configure PostgreSQL, Redis, authentication, GitHub, AI provider, encryption, and email settings in Railway. For a larger production setup, provision PostgreSQL and Redis as managed services and review the migration coordination item in [`docs/todo.md`](./docs/todo.md) before running multiple backend machines.
+
 ---
 
 ## System Architecture

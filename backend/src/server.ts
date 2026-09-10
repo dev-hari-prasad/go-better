@@ -22,15 +22,19 @@ import {
 import './workers/index.ts'
 
 // Middlewears
-import { authMiddleware } from './middleware/index.ts'; //Internal party
+import { authMiddleware, githubWebhookSignatureMiddleware } from './middleware/index.ts'; //Internal party
 import useragent from 'express-useragent'; // Thrid party
 
 // Inti app and declare port
 const app = express()
 const port = process.env.PORT || 5000 || 5654 || 8744
 
-//Body json parsing
-app.use(express.json()) // Internal
+// Preserve the raw payload so signed GitHub webhooks can be verified.
+app.use(express.json({
+  verify: (req, _res, buffer) => {
+    (req as express.Request & { rawBody?: Buffer }).rawBody = Buffer.from(buffer)
+  },
+}))
 app.use(cookieParser()) // Thrid part
 
 // Invalid JSON handler
@@ -62,7 +66,7 @@ app.get('/', (req, res) => {
 })
 
 //Routes
-app.use('/webhook', authMiddleware, webHookReciver)
+app.use('/webhook', githubWebhookSignatureMiddleware, webHookReciver)
 app.use('/byok', authMiddleware, byokRouter)
 app.use('/users', authMiddleware, usersRouter)
 app.use('/pull-request', authMiddleware, pullRequestRouter)

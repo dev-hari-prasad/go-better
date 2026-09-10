@@ -1,8 +1,8 @@
 - [ ] Design durationMs for workers to meauserse time taken to review
+- [ ] Handle production database migrations safely when multiple Docker machines start at the same time; use a single migration runner or database-level lock so only one instance migrates
 - [x] Make durationMs in db notNull currently reverted for devlopment 
 - Implement RLS policies 
 - Use turnation, context comapct etc on context on main ai routes
 - Update feedback route to 
 - [ ] Implement real-time token pricing & model cost calculation (v2: maintain model price registry per provider to calculate input/output token costs) 
 - [ ] Send review dadta with PR itself or create a get review tool 
-- Middlewears are simply funtions mounted on top of routes that have acesse to the req/res cycle with the autohirty to change the req, res object or end the req, res 

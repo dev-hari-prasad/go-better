@@ -8,11 +8,14 @@ import {
   Info,
   X,
   Sparkles,
+  ArrowUpRight,
 } from 'lucide-react';
 import { UnifiedModelItem } from '../../services/modelCatalogService';
 import { ModelBrandIcon } from './ModelBrandIcon';
 import { ModelDetailsCard } from './ModelDetailsCard';
 import { GobeAiLogo } from '../ui/GobeAiLogo';
+import { navigateTo } from '../../router/routes';
+import { fetchUserUsage } from '../../services/usageApi';
 
 export interface ModelPickerPopoverProps {
   isOpen: boolean;
@@ -69,9 +72,71 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
   const [highlightedIndex, setHighlightedIndex] = useState<number>(0);
   const [inspectedModel, setInspectedModel] = useState<UnifiedModelItem | null>(null);
   const [hoveredTab, setHoveredTab] = useState<{ id: string; label: string; top: number } | null>(null);
+  const [isOutOfLimit, setIsOutOfLimit] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('gobe_limit_exceeded') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const containerRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  // Check whether user has exceeded usage limit
+  useEffect(() => {
+    if (!isOpen) return;
+
+    try {
+      if (localStorage.getItem('gobe_limit_exceeded') === 'true') {
+        setIsOutOfLimit(true);
+      }
+    } catch {}
+
+    let mounted = true;
+    void fetchUserUsage().then((usage) => {
+      if (!mounted) return;
+      const isExceeded = Boolean(
+        usage && usage.allowedExpenditureLimit > 0 && usage.utilizedCost >= usage.allowedExpenditureLimit
+      );
+      setIsOutOfLimit(isExceeded);
+      try {
+        if (isExceeded) {
+          localStorage.setItem('gobe_limit_exceeded', 'true');
+        } else {
+          localStorage.removeItem('gobe_limit_exceeded');
+        }
+      } catch {}
+    });
+
+    const handleLimitExceeded = () => {
+      setIsOutOfLimit(true);
+    };
+    window.addEventListener('gobe-usage-limit-exceeded', handleLimitExceeded);
+
+    return () => {
+      mounted = false;
+      window.removeEventListener('gobe-usage-limit-exceeded', handleLimitExceeded);
+    };
+  }, [isOpen]);
+
+  // Detect if user has any custom / BYOK provider configured (any non-GoBetter models)
+  const hasCustomProvider = useMemo(() => {
+    return models.some((m) => {
+      const p = (m.providerId || '').toLowerCase();
+      const b = (m.brand || '').toLowerCase();
+      const l = (m.providerLabel || '').toLowerCase();
+      const isGoBetter = p === 'gobetter' || b === 'gobetter' || l.includes('gobetter');
+      return !isGoBetter;
+    });
+  }, [models]);
+
+  const handleNavigateToByok = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClose();
+    navigateTo('byok');
+  };
 
   const focusChatArea = () => {
     if (autoFocusChatInput) {
@@ -441,19 +506,25 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
         </div>
 
         {/* Right Main Content */}
-        <div
-          ref={listRef}
-          onMouseLeave={() => setHighlightedIndex(-1)}
-          className="flex-1 overflow-y-auto p-1.5 space-y-0.5 bg-[#0e1017] rounded-br-2xl"
-        >
-          {filteredModels.length === 0 ? (
-            <div className="py-16 text-center px-4 space-y-1">
-              <p className="text-xs font-medium text-zinc-400">No models found</p>
-              <p className="text-[11px] text-zinc-600">
-                Configure additional models in BYOK settings.
-              </p>
-            </div>
-          ) : (
+        <div className="flex-1 flex flex-col min-h-0 bg-[#0e1017] rounded-br-2xl overflow-hidden">
+          <div
+            ref={listRef}
+            onMouseLeave={() => setHighlightedIndex(-1)}
+            className="flex-1 overflow-y-auto p-1.5 space-y-0.5"
+          >
+            {filteredModels.length === 0 ? (
+              <div className="py-16 text-center px-4 space-y-2">
+                <p className="text-xs font-medium text-zinc-400">No models found</p>
+                <button
+                  type="button"
+                  onClick={handleNavigateToByok}
+                  className="text-[11px] text-[#c0f200] hover:underline cursor-pointer inline-flex items-center gap-1"
+                >
+                  <span>{isOutOfLimit ? 'Ran out of limit? Add custom model' : 'Add custom models in BYOK settings'}</span>
+                  <ArrowUpRight className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
             filteredModels.map((model, idx) => {
               const isSelected = activeModel?.id === model.id;
               const isFav = favoriteIds.includes(model.id);
@@ -552,6 +623,50 @@ export const ModelPickerPopover: React.FC<ModelPickerPopoverProps> = ({
                 </div>
               );
             })
+          )}
+          </div>
+
+          {/* Bottom subtle prompt bar if user ran out of limit or does not have custom provider configured */}
+          {(isOutOfLimit || !hasCustomProvider) && (
+            <div className="shrink-0 px-3 py-2 border-t border-[#1a1c26] bg-[#0c0e15] flex items-center justify-between rounded-br-2xl select-none">
+              {isOutOfLimit ? (
+                <button
+                  type="button"
+                  onClick={handleNavigateToByok}
+                  className="group flex items-center justify-between w-full text-[11px] text-amber-400/90 hover:text-amber-300 transition-colors cursor-pointer"
+                  title="Go to BYOK settings to add custom models"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                    <span className="truncate">
+                      Ran out of limit?{' '}
+                      <span className="underline decoration-amber-400/50 group-hover:decoration-amber-300 font-medium">
+                        Add custom model
+                      </span>
+                    </span>
+                  </span>
+                  <ArrowUpRight className="w-3.5 h-3.5 shrink-0 ml-1 text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleNavigateToByok}
+                  className="group flex items-center justify-between w-full text-[11px] text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
+                  title="Go to BYOK settings to add custom models"
+                >
+                  <span className="flex items-center gap-1.5 truncate">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-zinc-600 group-hover:bg-[#c0f200] transition-colors shrink-0" />
+                    <span className="truncate group-hover:underline decoration-zinc-500">
+                      Add custom models
+                    </span>
+                  </span>
+                  <span className="text-[10px] text-[#c0f200] flex items-center gap-0.5 shrink-0 font-mono">
+                    Configure{' '}
+                    <ArrowUpRight className="w-3 h-3 shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                  </span>
+                </button>
+              )}
+            </div>
           )}
         </div>
       </div>

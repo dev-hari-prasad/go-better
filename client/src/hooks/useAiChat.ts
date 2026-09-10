@@ -477,6 +477,16 @@ export const useAiChat = () => {
       } catch (err) {
         const detail =
           err instanceof Error ? err.message : 'Something went wrong while chatting.';
+        if (
+          detail.toLowerCase().includes('spending limit') ||
+          detail.toLowerCase().includes('exceeded your spending limit') ||
+          detail.toLowerCase().includes('exceeded')
+        ) {
+          try {
+            localStorage.setItem('gobe_limit_exceeded', 'true');
+            window.dispatchEvent(new CustomEvent('gobe-usage-limit-exceeded'));
+          } catch {}
+        }
         setError(detail);
         setMessages((prev) =>
           prev.map((m) =>

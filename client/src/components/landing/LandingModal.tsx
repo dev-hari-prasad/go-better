@@ -209,15 +209,16 @@ export const LandingModal: React.FC<LandingModalProps> = ({
             {/* Center: Navigation Links with Phosphor Icons */}
             <nav className="flex items-center gap-4 sm:gap-6">
               <a
-                href="#docs"
-                onClick={(e) => e.preventDefault()}
+                href="https://docs.gobetter.dev"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="group flex items-center gap-1.5 text-xs text-zinc-300 hover:text-[#c0f200] transition-colors font-medium font-sans"
               >
                 <BookOpen size={14} weight="duotone" className="text-zinc-400 group-hover:text-[#c0f200] transition-colors" />
                 <span>Docs</span>
               </a>
               <a
-                href="https://github.com"
+                href="https://github.com/dev-hari-prasad/go-better"
                 target="_blank"
                 rel="noreferrer"
                 className="group flex items-center gap-1.5 text-xs text-zinc-300 hover:text-[#c0f200] transition-colors font-medium font-sans"

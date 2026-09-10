@@ -551,7 +551,7 @@ export const LegalView: React.FC<LegalViewProps> = ({
               <br/>
               <br/>
 
-              If data residency or jurisdictional requirements are important to you, we recommend first trying our self-hosted version, which is available through our public repositories, to evaluate the software in an environment where you retain control over where your data is processed and stored. You may then use our open source self hosted version with only those subprocessors and service providers whose data-processing practices and jurisdictions are acceptable for your requirements.
+              If data residency or jurisdictional requirements are important to you, we recommend first trying our self-hosted version, which is available through <a href="https://github.com/dev-hari-prasad/go-better" target="_blank" rel="noopener noreferrer" className="text-[#c0f200] underline hover:brightness-110 font-medium">our public repository</a>, to evaluate the software in an environment where you retain control over where your data is processed and stored. You may then use our open source self hosted version with only those subprocessors and service providers whose data-processing practices and jurisdictions are acceptable for your requirements.
             </p>
 
             <p className="text-zinc-300 leading-relaxed">

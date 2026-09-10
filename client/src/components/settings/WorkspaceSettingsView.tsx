@@ -3,7 +3,7 @@ import {
   UserGroupIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
-import { Coins, ChevronDown, Github, Brain, RotateCw, Shield, Laptop, Smartphone, LogOut, RefreshCw, Key, Eye, EyeOff, Bell, Pencil, Trash2, AlertTriangle } from 'lucide-react';
+import { Coins, ChevronDown, Github, Brain, RotateCw, Shield, Laptop, Smartphone, LogOut, RefreshCw, Key, Eye, EyeOff, Bell, Pencil, Trash2, AlertTriangle, BookOpen } from 'lucide-react';
 import { toast } from 'sonner';
 import { UserSettings } from '../../types/codeReview';
 import {
@@ -1121,15 +1121,26 @@ export const WorkspaceSettingsView: React.FC<{ settings: UserSettings; onSaveSet
             <p className="text-[13px] text-zinc-400 leading-relaxed mb-6">
               <span className="text-shimmer">Go Better is 100% free!</span> You just bring your own keys, so we don't have to burn a hole in your pocket. Also, <span className="text-shimmer">Go Better is fully open source</span>—just in case you want to experience the sheer pain of self‑hosting this complex architecture yourself!
             </p>
-            <a 
-              href="https://github.com/google-deepmind/antigravity" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white hover:bg-zinc-200 text-black font-semibold rounded-xl text-sm transition-all shadow-md active:scale-95 hover:scale-105 cursor-pointer"
-            >
-              <Github className="w-4 h-4" />
-              View on GitHub
-            </a>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <a
+                href="https://github.com/dev-hari-prasad/go-better"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white hover:bg-zinc-200 text-black font-semibold rounded-xl text-sm transition-all shadow-md active:scale-95 hover:scale-105 cursor-pointer"
+              >
+                <Github className="w-4 h-4" />
+                View on GitHub
+              </a>
+              <a
+                href="https://docs.gobetter.dev"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-[#16171d] hover:bg-[#20222a] border border-white/10 hover:border-white/20 text-zinc-200 hover:text-white font-semibold rounded-xl text-sm transition-all shadow-md active:scale-95 hover:scale-105 cursor-pointer"
+              >
+                <BookOpen className="w-4 h-4 text-[#c0f200]" />
+                Documentation
+              </a>
+            </div>
           </div>
         );
       default:

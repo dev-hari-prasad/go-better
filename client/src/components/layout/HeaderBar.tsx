@@ -107,6 +107,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     return () => window.removeEventListener('open-gobe-chat', handleOpenGobeChat);
   }, []);
 
+  // Close quick chat modal on route change
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setShowChatModal(false);
+      setPendingConversation(null);
+      setPendingPr(null);
+    };
+    window.addEventListener('app-route-change', handleRouteChange);
+    return () => window.removeEventListener('app-route-change', handleRouteChange);
+  }, []);
+
   const loadQuickChats = async () => {
     setIsLoadingQuickChats(true);
     try {

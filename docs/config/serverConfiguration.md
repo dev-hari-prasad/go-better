@@ -38,7 +38,7 @@ This reads `copy-env-config.json` and copies `src/.env.example` to `src/.env`. T
 | **Encryption & Auth** | `API_ENCRYPTION_KEY`, `BETTER_AUTH_URL` | `backend/src/.env` or Compose | Unset / None |
 | **Per-User Free Spend Allowance** | `perUserSpendLimit` | `backend/src/config/config.ts` | `$0.30` USD |
 | **Platform Free Model Pricing** | `goBetterFreeModels` | `backend/src/config/config.ts` | Model price map |
-| **Platform InceptionLabs Gateway** | `goBetterBaseUrl` | `backend/src/config/config.ts` | InceptionLabs gateway URL |
+| **Platform InceptionLabs Gateway** | `goBetterBaseURL` | `backend/src/config/config.ts` | InceptionLabs gateway URL |
 
 
 ---
@@ -222,7 +222,7 @@ export const goBetterFreeModels = {
     },
 };
 
-export const goBetterBaseUrl = 'https://api.inceptionlabs.ai/v1/chat/completions';
+export const goBetterBaseURL = 'https://api.inceptionlabs.ai/v1/chat/completions';
 ```
 
 ---

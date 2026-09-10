@@ -1,15 +1,27 @@
 // Ammount user can spend on the platform before they need to enabled byok
-export const perUserSpendLimit = 0.3
-export const goBetterFreeModels = {
+export const perUserSpendLimit = 0.3;
 
+const envBaseModel = process.env.BASE_MODEL?.trim();
+
+export const goBetterFreeModels: Record<string, { modelProviderName: string; inputCost: number; outputCost: number }> = {
     'mercury-2': {
         modelProviderName: 'inceptionlabs',
         inputCost: 0.25,
-        outputCost: 0.75
-    }
-}
+        outputCost: 0.75,
+    },
+    ...(envBaseModel && envBaseModel !== 'mercury-2' ? {
+        [envBaseModel]: {
+            modelProviderName: process.env.AI_PROVIDER || 'inceptionlabs',
+            inputCost: 0.25,
+            outputCost: 0.75,
+        }
+    } : {})
+};
 
-export const goBetterBaseUrl = 'https://api.inceptionlabs.ai/v1/chat/completions'
+export const defaultBaseModel = envBaseModel || 'mercury-2';
+
+export const goBetterBaseURL = process.env.AI_BASE_URL || 'https://api.inceptionlabs.ai/v1/chat/completions';
+export const goBetterBaseUrl = goBetterBaseURL;
 
 // Brand and Email Configuration
 export const brandName = process.env.BRAND_NAME || 'Go Better';
@@ -43,4 +55,4 @@ export const emailBrandConfig = {
 };
 
 export const emailConfig = emailBrandConfig;
-export const brandConfig = emailBrandConfig;
+export const brandConfig = emailBrandConfig;

@@ -65,7 +65,7 @@ router.post('/chat', async (req, res) => {
             "no-store, no-cache, must-revalidate, proxy-revalidate");
         res.setHeader("Connection", "keep-alive");
 
-        const requestedModel = body.llmModel || body.model || body.modelName || body.customModelData?.id;
+        const requestedModel = body.llmModel || body.model || body.modelName || body.customModelData?.id || process.env.BASE_MODEL || 'mercury-2';
         const customModelData = body.customModelData || (body.customModel ? { id: requestedModel, isCustom: true } : undefined);
 
         // Generate conversation id and send to client

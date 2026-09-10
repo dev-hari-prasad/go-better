@@ -12,7 +12,7 @@ import { REDIS_KEYS } from "../lib/redis/redisKeys.ts";
 import workspaceSettings from "../database/schema/workspace.ts";
 import { syncBuiltinESMExports } from "node:module";
 import usageTable from "../database/schema/usage.ts";
-import { goBetterBaseUrl, goBetterFreeModels, perUserSpendLimit } from "../config/config.ts";
+import { goBetterBaseURL, goBetterFreeModels, perUserSpendLimit } from "../config/config.ts";
 import { decryptApiKey } from "../utils/encryptApi.ts";
 import { log } from 'node:console';
 
@@ -27,6 +27,10 @@ type ByokConfig = {
 export function isFreeModel(modelName?: string): boolean {
     if (!modelName) return false;
     const name = modelName.trim().toLowerCase();
+    const envBase = process.env.BASE_MODEL?.trim().toLowerCase();
+    if (envBase && (name === envBase || name.endsWith(`/${envBase}`) || envBase.endsWith(`/${name}`))) {
+        return true;
+    }
     if (name in goBetterFreeModels) return true;
 
     for (const freeKey of Object.keys(goBetterFreeModels)) {
@@ -39,6 +43,26 @@ export function isFreeModel(modelName?: string): boolean {
             return true;
         }
     }
+    return false;
+}
+
+function isGoBetterFreeModel(modelName?: string, customModelData?: CustomModelPayload): boolean {
+    const candidateName = modelName || customModelData?.id || customModelData?.name;
+    if (isFreeModel(candidateName)) return true;
+
+    const providerId = customModelData?.providerId?.trim().toLowerCase();
+    const platformProviders = ['gobetter', 'inception', 'inceptionlabs', 'mercury-2', 'mercury'];
+    if (providerId && platformProviders.includes(providerId)) return true;
+
+    if (customModelData?.baseURL) {
+        const cleanBase = customModelData.baseURL.replace(/\/chat\/completions\/?$/, '').toLowerCase().trim();
+        const defaultBase = goBetterBaseURL.replace(/\/chat\/completions\/?$/, '').toLowerCase().trim();
+        const envBase = process.env.AI_BASE_URL?.replace(/\/chat\/completions\/?$/, '').toLowerCase().trim();
+        if (cleanBase === defaultBase || (envBase && cleanBase === envBase)) {
+            return true;
+        }
+    }
+
     return false;
 }
 
@@ -96,7 +120,7 @@ async function checkByok(
     requestedModel?: string, 
     customModelData?: CustomModelPayload
 ): Promise<ByokConfig> {
-    const isFree = !customModelData?.isCustom && isFreeModel(requestedModel);
+    const isFree = isGoBetterFreeModel(requestedModel, customModelData);
 
     // 1. Fetch user's active BYOK records from Redis cache (or DB on miss)
     // Stored with ENCRYPTED API keys on Redis so we don't rerequest DB all the time
@@ -156,12 +180,28 @@ async function checkByok(
     // If requesting our free model:
     // "if user dose have usage and that is enough to satisfy it then its ok let them use our free one else dont"
     if (isFree) {
-        if (hasUsage) {
+        const hasPlatformKey = isValidApiKey(process.env.AI_API_KEY);
+        if (hasUsage && hasPlatformKey) {
             await redis.set(REDIS_KEYS.freeUsage(userId), 'true', 'EX', 3600);
             return {
-                apiKey: process.env.AI_API_KEY || '',
-                baseURL: goBetterBaseUrl,
+                apiKey: process.env.AI_API_KEY!,
+                baseURL: customModelData?.baseURL || process.env.AI_BASE_URL || goBetterBaseURL,
             };
+        } else if (hasUsage && !hasPlatformKey) {
+            // Platform key is not set, check if user configured their own BYOK key
+            const userByok = activeValidByok[0];
+            if (userByok?.modelApiKey) {
+                const dec = decryptApiKey(userByok.modelApiKey);
+                if (isValidApiKey(dec)) {
+                    return {
+                        apiKey: dec,
+                        baseURL: resolveProviderBaseUrl(userByok.modelProviderName, userByok.customBaseUrl || customModelData?.baseURL, dec),
+                    };
+                }
+            }
+            throw new Error(
+                'AI service is not configured on the server (missing AI_API_KEY). Please add your own API key in Settings -> BYOK & Keys.'
+            );
         } else {
             // Free limit exceeded. Check if user configured their own BYOK key
             const userByok = activeValidByok[0];
@@ -170,7 +210,7 @@ async function checkByok(
                 if (isValidApiKey(dec)) {
                     return {
                         apiKey: dec,
-                        baseURL: resolveProviderBaseUrl(userByok.modelProviderName, userByok.customBaseUrl, dec),
+                        baseURL: resolveProviderBaseUrl(userByok.modelProviderName, userByok.customBaseUrl || customModelData?.baseURL, dec),
                     };
                 }
             }
@@ -274,6 +314,15 @@ async function checkByok(
         }
     }
 
+    // Platform fallback if user has platform usage remaining and server has AI_API_KEY configured:
+    if (hasUsage && isValidApiKey(process.env.AI_API_KEY)) {
+        await redis.set(REDIS_KEYS.freeUsage(userId), 'true', 'EX', 3600);
+        return {
+            apiKey: process.env.AI_API_KEY!,
+            baseURL: customModelData?.baseURL || process.env.AI_BASE_URL || goBetterBaseURL,
+        };
+    }
+
     // If user requested a custom model but has no valid key configured:
     if (customModelData?.isCustom) {
         throw new Error(
@@ -281,18 +330,16 @@ async function checkByok(
         );
     }
 
-    // Platform fallback only for standard non-custom models if user has platform usage remaining:
-    if (hasUsage) {
-        await redis.set(REDIS_KEYS.freeUsage(userId), 'true', 'EX', 3600);
-        return process.env.AI_BASE_URL
-            ? { apiKey: process.env.AI_API_KEY || '', baseURL: process.env.AI_BASE_URL }
-            : { apiKey: process.env.AI_API_KEY || '' };
-    } else {
+    if (!hasUsage) {
         await redis.set(REDIS_KEYS.freeUsage(userId), 'false');
         throw new Error(
             'You have exceeded your spending limit. Please configure your LLM providers in dashboard'
         );
     }
+
+    throw new Error(
+        'No valid API key configured for the requested model. Please configure your LLM providers in Settings -> BYOK & Keys.'
+    );
 }
 
 const value = process.env.OPEN_AI_INTERFACE ?? 'chat';
@@ -321,7 +368,7 @@ function createUserModel(config: ByokConfig, modelName?: string) {
         apiKey: sanitizedApiKey,
         ...(baseURL ? { baseURL } : {})
     });
-    const targetModel = modelName ? resolveModelId(modelName) : (process.env.BASE_MODEL || 'openai/gpt-4o');
+    const targetModel = modelName ? resolveModelId(modelName) : (process.env.BASE_MODEL || 'mercury-2');
     return openai[openaiInterfaceMethod](targetModel);
 }
 
@@ -369,7 +416,7 @@ export async function aiGeneratetext (
     modelNameParam?: string,
     customModelData?: CustomModelPayload
 ): Promise<string> {
-    const modelName = modelNameParam || customModelData?.id || process.env.BASE_MODEL || 'openai/gpt-4o';
+    const modelName = modelNameParam || customModelData?.id || process.env.BASE_MODEL || 'mercury-2';
     const byokConfig = await checkByok(userId, modelName, customModelData);
     const model = createUserModel(byokConfig, modelName);
     const { text, usage } = await generateText({
@@ -393,7 +440,7 @@ export async function aiStreamText (
     modelNameParam?: string,
     customModelData?: CustomModelPayload
 ): Promise<ReturnType<typeof streamText>> {
-    const modelName = modelNameParam || customModelData?.id || process.env.BASE_MODEL || 'openai/gpt-4o';
+    const modelName = modelNameParam || customModelData?.id || process.env.BASE_MODEL || 'mercury-2';
     const byokConfig = await checkByok(userId, modelName, customModelData);
     const model = createUserModel(byokConfig, modelName);
     return streamText({
@@ -431,7 +478,7 @@ export async function saveMessage(
                 outputTextTokens,
                 outputReasoningTokens,
                 usedToolCalls: usedToolCalls ?? null,
-                llmModel: llmModel || process.env.BASE_MODEL || 'openai/gpt-4o',
+                llmModel: llmModel || process.env.BASE_MODEL || 'mercury-2',
                 inputTokens,
                 outputToken,
                 conversationId: conversationId || undefined,

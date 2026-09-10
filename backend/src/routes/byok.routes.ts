@@ -5,7 +5,7 @@ import byok from '../database/schema/byok.ts'
 import { encryptApiKey, decryptApiKey } from '../utils/encryptApi.ts'
 import { FetchModelListParams, getModelList, getCleanModelList, parseAndCleanModels } from '../service/byok.service.ts'
 import { and, desc, eq, sql } from 'drizzle-orm'
-import { goBetterBaseUrl, goBetterFreeModels } from '../config/config.ts'
+import { goBetterBaseURL, goBetterFreeModels } from '../config/config.ts'
 import redis from '../lib/redis/redisClient.ts'
 import { REDIS_KEYS } from '../lib/redis/redisKeys.ts'
 
@@ -189,7 +189,7 @@ router.post('/model-list', async (req, res) => {
         id: '1',
         modelProviderName: "goBetter",
         customModels: false,
-        customBase: goBetterBaseUrl,
+        customBase: goBetterBaseURL,
         availableModels: [
             goBetterFreeModels
         ]
@@ -267,7 +267,7 @@ router.get('/model-list', async(req, res) => {
             id: '1',
             modelProviderName: "goBetter",
             customModels: false,
-            customBase: goBetterBaseUrl,
+            customBase: goBetterBaseURL,
             availableModels: [
                 goBetterFreeModels
             ]

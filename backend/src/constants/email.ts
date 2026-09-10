@@ -6,9 +6,18 @@ import { emailBrandConfig } from '../config/config.ts';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const templatePath = fs.existsSync(path.join(__dirname, '../tempaltes/otpTemplate.html'))
-  ? path.join(__dirname, '../tempaltes/otpTemplate.html')
-  : path.join(__dirname, '../templates/otpTemplate.html');
+const templateCandidates = [
+  path.join(__dirname, '../tempaltes/otpTemplate.html'),
+  path.join(__dirname, '../templates/otpTemplate.html'),
+  path.join(__dirname, 'templates/otpTemplate.html'),
+  path.join(process.cwd(), 'dist/templates/otpTemplate.html'),
+  path.join(process.cwd(), 'templates/otpTemplate.html'),
+];
+const templatePath = templateCandidates.find((candidate) => fs.existsSync(candidate));
+
+if (!templatePath) {
+  throw new Error(`OTP email template not found. Checked: ${templateCandidates.join(', ')}`);
+}
 
 export const otpTemplateHtml = fs.readFileSync(templatePath, 'utf-8');
 

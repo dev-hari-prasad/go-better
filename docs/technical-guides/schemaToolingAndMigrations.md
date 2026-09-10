@@ -88,7 +88,7 @@ pnpm run db:migrate
 - Applies all pending migration files in chronological order within a transaction.
 - Logs elapsed execution time upon completion.
 
-### 3. Direct Schema Push (`db:push` - Dev Only)
+### 3. Direct Schema Push (Development Only)
 
 ```bash
 cd backend

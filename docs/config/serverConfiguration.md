@@ -7,11 +7,12 @@ description: 'Backend environment variables, databases, Redis queues, and securi
 
 <Tip>
 **Quick Setup with [`copy-env`](https://www.npmjs.com/package/copy-env)**  
-Scaffold your `backend/.env` from the example template in one command:
+From the `backend/` directory, scaffold the runtime env file in one command:
 ```bash
-npx copy-env
+pnpm install
+pnpm run copy-env
 ```
-This reads `copy-env-config.json` and copies `src/.env.example` → `src/.env`, so you only need to fill in your secrets.
+This reads `copy-env-config.json` and copies `src/.env.example` to `src/.env`. The backend loads `src/.env` at startup; fill in the generated placeholders before running the server. Docker Compose can additionally load `backend/.env` when that file exists.
 </Tip>
 
 ---
@@ -20,17 +21,17 @@ This reads `copy-env-config.json` and copies `src/.env.example` → `src/.env`, 
 
 | Feature / Setting | Option / Key | Where to Toggle | Default Value |
 | :--- | :--- | :--- | :--- |
-| **HTTP Listening Port** | `PORT` | `backend/.env` | `5000` |
-| **CORS Origin Allowance** | `CLIENT_URL` | `backend/.env` | `http://localhost:3000` |
-| **PostgreSQL Connection String** | `DATABASE_URL` | `backend/.env` | `postgresql://...` (Required) |
-| **Redis Broker URI** | `REDIS_URL` | `backend/.env` | `redis://localhost:6379` |
-| **Default Fallback AI Model** | `BASE_MODEL` | `backend/.env` | `openai/gpt-4o` |
-| **Platform AI Provider API Key** | `AI_API_KEY` | `backend/.env` | Unset / None |
-| **Custom AI Endpoint Gateway** | `AI_BASE_URL` | `backend/.env` | Default (Standard OpenAI) |
-| **OpenAI Client Invocation Method**| `OPEN_AI_INTERFACE` | `backend/.env` | `chat` |
-| **Email Delivery (Resend API)** | `RESEND_API_KEY` | `backend/.env` | Unset / None |
-| **Brand Identity & Domain** | `BRAND_NAME`, `BRAND_URL` | `backend/.env` / `config.ts` | `Go Better`, `https://gobetter.dev` |
-| **Sender Email & Theming** | `FROM_EMAIL`, `EMAIL_THEME` | `backend/.env` / `config.ts` | `noreply@mail.gobetter.dev`, `dark` |
+| **HTTP Listening Port** | `PORT` | `backend/src/.env` or Compose | `5000` |
+| **CORS Origin Allowance** | `CLIENT_URL` | `backend/src/.env` or Compose | `http://localhost:3000` |
+| **PostgreSQL Connection String** | `DATABASE_URL` | `backend/src/.env` or Compose | Required |
+| **Redis Broker URI** | `REDIS_URL` | `backend/src/.env` or Compose | `redis://localhost:6379` |
+| **Default Fallback AI Model** | `BASE_MODEL` | `backend/src/.env` or Compose | Provider-specific |
+| **Platform AI Provider API Key** | `AI_API_KEY` | `backend/src/.env` or Compose | Unset / None |
+| **Custom AI Endpoint Gateway** | `AI_BASE_URL` | `backend/src/.env` or Compose | Provider-specific |
+| **OpenAI Client Invocation Method**| `OPEN_AI_INTERFACE` | `backend/src/.env` or Compose | `chat` |
+| **Email Delivery (Resend API)** | `RESEND_API_KEY` | `backend/src/.env` or Compose | Unset / None |
+| **GitHub Integration** | `GITHUB_ACESSES_TOKEN`, `GITHUB_APP_*` | `backend/src/.env` or Compose | Unset / None |
+| **Encryption & Auth** | `API_ENCRYPTION_KEY`, `BETTER_AUTH_URL` | `backend/src/.env` or Compose | Unset / None |
 | **Per-User Free Spend Allowance** | `perUserSpendLimit` | `backend/src/config/config.ts` | `$0.30` USD |
 | **Platform Free Model Pricing** | `goBetterFreeModels` | `backend/src/config/config.ts` | Model price map |
 | **Platform InceptionLabs Gateway** | `goBetterBaseUrl` | `backend/src/config/config.ts` | InceptionLabs gateway URL |
@@ -39,6 +40,39 @@ This reads `copy-env-config.json` and copies `src/.env.example` → `src/.env`, 
 ---
 
 ## Detailed Configuration Breakdown
+
+## Where to Get Each Backend Value
+
+Create the backend file from `backend/src/.env.example` and replace every `YOUR_VALUE_HERE` placeholder. Keep this file private: backend environment values are secrets unless marked **public configuration**.
+
+| Variable | Required | How to acquire it |
+| :--- | :---: | :--- |
+| `PORT` | Yes | Use `5000` locally. In a hosted container, use the port required by the platform and keep the Compose mapping in sync. **Public configuration.** |
+| `BASE_MODEL` | Yes | Copy the model ID from the AI provider's model catalog, for example `mercury-2` for InceptionLabs. |
+| `AI_BASE_URL` | Yes | Copy the OpenAI-compatible API base URL from the provider's API documentation. |
+| `AI_API_KEY` | Yes | Create an API key in the selected AI provider's dashboard. Store it only in the backend environment. |
+| `OPEN_AI_INTERFACE` | Yes | Use `chat` for chat-completions providers. Use `responses` only when the selected provider supports it. |
+| `GITHUB_ACESSES_TOKEN` | Optional | This is the current spelling in the template. The current backend does not read it directly; prefer the GitHub App values below. |
+| `REDIS_URL` | Yes | Create a Redis database with Redis Cloud, Upstash, Railway, or locally. Copy its full connection URI. |
+| `DATABASE_URL` | Yes | Create a PostgreSQL database with Neon, Supabase, Railway, or locally. Copy its connection string and keep SSL parameters intact. |
+| `API_ENCRYPTION_KEY` | Yes | Generate a unique 32-byte secret encoded as base64. Do not reuse a password or commit it. |
+| `CLIENT_URL` | Yes | Set this to the browser origin allowed to call the API, such as `http://localhost:3000` or your deployed frontend URL. **Public configuration.** |
+| `API_BASE_URL` | Yes for GitHub callbacks | Set this to the public backend origin, such as `http://localhost:5000` or `https://api.example.com`. **Public configuration.** |
+| `BETTER_AUTH_URL` | Yes for hosted auth | Set this to the backend's public origin. It normally matches `API_BASE_URL`. **Public configuration.** |
+| `RESEND_API_KEY` | Yes for email | Create an API key in the Resend dashboard. Verify the sending domain and sender address first. |
+| `GITHUB_APP_CLIENT_ID` | Yes for GitHub login | Create or open a GitHub OAuth App and copy its Client ID. Set its callback URL to `<API_BASE_URL>/auth/github/callback`. |
+| `GITHUB_APP_CLIENT_SECRET` | Yes for GitHub login | Copy or generate the Client secret from the same GitHub OAuth App. Store it only in the backend environment. |
+| `GITHUB_APP_SLUG` | Yes for GitHub App links | Copy the slug from the GitHub App installation URL or app settings. |
+
+### Generate an Encryption Key
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+```
+
+### Backend Secrets and Rotation
+
+Never place `AI_API_KEY`, `DATABASE_URL`, `REDIS_URL`, `RESEND_API_KEY`, GitHub secrets, or `API_ENCRYPTION_KEY` in frontend files, source control, Docker images, or public issue reports. If a secret is exposed, revoke it at the provider immediately and replace it in the backend environment.
 
 ### 1. Networking & CORS
 
@@ -51,11 +85,11 @@ This reads `copy-env-config.json` and copies `src/.env.example` → `src/.env`, 
   ```
 
 #### `CLIENT_URL`
-- **Location**: `backend/.env`
-- **Description**: Configured in Hono's `cors()` middleware in `backend/src/server.ts`:
+- **Location**: `backend/src/.env` or the Compose environment
+- **Description**: Configured in Express's `cors()` middleware in `backend/src/server.ts`:
   ```typescript
-  app.use('*', cors({
-    origin: process.env.CLIENT_URL || 'http://localhost:3000',
+  app.use(cors({
+    origin: process.env.CLIENT_URL,
     credentials: true,
   }));
   ```
@@ -179,36 +213,21 @@ export const goBetterBaseUrl = 'https://api.inceptionlabs.ai/v1/chat/completions
 ## Server Environment Template (`backend/.env.example`)
 
 ```bash
-# ==========================================
-# GoBetter Server Environment Configuration
-# ==========================================
-
-# Server Network Configuration
-PORT=5000
-CLIENT_URL=http://localhost:3000
-
-# PostgreSQL Database (Drizzle ORM)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gobetter
-
-# Redis Queue Connection (BullMQ & Sessions)
-REDIS_URL=redis://localhost:6379
-
-# Primary AI Model & Provider
-BASE_MODEL=openai/gpt-4o
-AI_API_KEY=your-server-ai-api-key
-AI_BASE_URL=https://api.openai.com/v1
-OPEN_AI_INTERFACE=chat
-
-# Email Service (Resend)
-RESEND_API_KEY=re_your_resend_api_key
-
-# Branding & Transactional Email
-BRAND_NAME="Go Better"
-BRAND_URL="https://gobetter.dev"
-BRAND_TAGLINE="Autonomous AI Code Reviews"
-FROM_EMAIL="noreply@mail.gobetter.dev"
-FROM_SENDER="Go Better <noreply@mail.gobetter.dev>"
-EMAIL_THEME="dark"
-COPYRIGHT_YEAR="2026"
-BRAND_LOGO_URL="https://gobetter.dev/gobetter-logo.png"
+# Copy backend/src/.env.example to backend/src/.env, then replace placeholders.
+PORT="YOUR_VALUE_HERE"
+BASE_MODEL="YOUR_VALUE_HERE"
+AI_BASE_URL="YOUR_VALUE_HERE"
+AI_API_KEY="YOUR_VALUE_HERE"
+OPEN_AI_INTERFACE="YOUR_VALUE_HERE"
+GITHUB_ACESSES_TOKEN="YOUR_VALUE_HERE"
+REDIS_URL="YOUR_VALUE_HERE"
+DATABASE_URL="YOUR_VALUE_HERE"
+API_ENCRYPTION_KEY="YOUR_VALUE_HERE"
+CLIENT_URL="YOUR_VALUE_HERE"
+API_BASE_URL="YOUR_VALUE_HERE"
+BETTER_AUTH_URL="YOUR_VALUE_HERE"
+RESEND_API_KEY="YOUR_VALUE_HERE"
+GITHUB_APP_CLIENT_ID="YOUR_VALUE_HERE"
+GITHUB_APP_CLIENT_SECRET="YOUR_VALUE_HERE"
+GITHUB_APP_SLUG="YOUR_VALUE_HERE"
 ```

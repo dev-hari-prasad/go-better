@@ -6,12 +6,7 @@ description: 'Frontend environment variables, local storage toggles, and runtime
 ---
 
 <Tip>
-**Quick Setup with [`copy-env`](https://www.npmjs.com/package/copy-env)**  
-Scaffold your `client/.env` from the example template in one command:
-```bash
-npx copy-env
-```
-This copies `.env.example` → `.env` so you only need to fill in your values.
+The client does not use the backend `copy-env` command. Copy `client/.env.example` to `client/.env`, then set the Vite variables required for your environment.
 </Tip>
 
 ---
@@ -77,7 +72,31 @@ window.dispatchEvent(new CustomEvent('gobetter-config-changed'));
 
 ### 2. Client Environment Template (`client/.env.example`)
 
-Create a `.env` file in the `client/` directory with the following variables:
+Create `client/.env` by copying `client/.env.example`:
+
+```bash
+cp client/.env.example client/.env
+```
+
+## Where to Get Each Frontend Value
+
+Frontend variables are read by Vite at build time and included in the browser JavaScript bundle. They must contain configuration only and never passwords, API keys, database URLs, or tokens.
+
+| Variable | Required | How to set it |
+| :--- | :---: | :--- |
+| `VITE_API_BASE_URL` | Yes | Use `http://localhost:5000` locally or the deployed API origin in production. **Public configuration.** |
+| `VITE_ENABLE_PUBLIC_REPOS` | Optional | Set `true` to enable the Public Repos Explorer or `false`/`0` to lock it globally. |
+| `VITE_USER_ID` | Optional | Use a test user UUID for standalone or mock development only. Real authentication should resolve the user normally. |
+
+Update `client/.env` before running Vite or building the Docker image:
+
+```dotenv
+VITE_API_BASE_URL=http://localhost:5000
+VITE_ENABLE_PUBLIC_REPOS=true
+VITE_USER_ID=00000000-0000-0000-0000-000000000001
+```
+
+The frontend service in Docker Compose is optional and currently commented out. If you enable it, provide `client/.env` before building so Vite embeds the intended API URL.
 
 ```bash
 # ==========================================

@@ -10,8 +10,8 @@ Follow this guide to set up the GoBetter backend and frontend applications local
 
 Ensure you have the following installed on your system:
 
-- [Node.js](https://nodejs.org/) (v20 or higher) or [Bun](https://bun.sh/)
-- [pnpm](https://pnpm.io/) package manager
+- [Node.js](https://nodejs.org/) 22 LTS
+- [pnpm](https://pnpm.io/) 10.33.0 or Corepack
 - [Docker](https://www.docker.com/) (recommended for PostgreSQL and Redis)
 - An AI provider API key (e.g. OpenAI, OpenRouter) or access to platform models
 
@@ -50,31 +50,28 @@ brew services start redis
 
 ### Backend Configuration
 
-Create a `.env` file in the `backend/` directory:
+Install the backend dependencies and generate the local environment file from the checked-in template:
 
-```bash backend/.env
-PORT=5000
-CLIENT_URL=http://localhost:3000
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/gobetter_db
-REDIS_URL=redis://localhost:6379
-
-# AI Model Provider
-BASE_MODEL=openai/gpt-4o
-AI_API_KEY=your-openai-or-openrouter-key
-AI_BASE_URL=https://api.openai.com/v1
-OPEN_AI_INTERFACE=chat
-
-# Optional: Resend API for transactional auth emails
-RESEND_API_KEY=re_your_api_key
+```bash
+cd backend
+pnpm install
+pnpm run copy-env
 ```
+
+This creates `backend/src/.env` from `backend/src/.env.example`. Fill in the database, Redis, AI provider, GitHub, encryption, authentication, and email values before starting the server. The backend loads this file from `src/config/env.ts`.
 
 ### Client Configuration
 
-Create a `.env` file in the `client/` directory:
+Create the client environment file from the checked-in template:
+
+```bash
+cp client/.env.example client/.env
+```
 
 ```bash client/.env
 VITE_API_BASE_URL=http://localhost:5000
 VITE_ENABLE_PUBLIC_REPOS=true
+VITE_USER_ID=00000000-0000-0000-0000-000000000001
 ```
 
 ---
@@ -86,8 +83,8 @@ Install dependencies in both directories and apply the database schema using Dri
 ```bash
 # Backend setup
 cd backend
-pnpm install
-pnpm run db:push    # or npx drizzle-kit push
+pnpm run db:gen
+pnpm run db:migrate
 
 # Client setup
 cd ../client
@@ -115,3 +112,33 @@ pnpm run dev
 </CodeGroup>
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to start reviewing pull requests with GoBetter.
+
+## Production Builds
+
+The backend build type-checks the source and creates a tree-shaken esbuild bundle at `backend/dist/server.js`. The frontend uses Vite production bundling with tree shaking and writes static assets to `client/dist`.
+
+```bash
+cd backend
+pnpm run build
+pnpm start
+
+cd ../client
+pnpm run build
+```
+
+## Docker Compose
+
+The current Compose file starts the backend service on port `5000`. The frontend service is present but commented out, because the frontend can be deployed separately as an Nginx static image.
+
+```bash
+docker compose config
+docker compose up --build
+```
+
+To build the frontend image directly:
+
+```bash
+docker compose build frontend
+```
+
+The backend image uses Node 22 and the frontend image uses a Node 22 build stage with Nginx as the runtime server.

@@ -1,3 +1,0 @@
-ALTER TABLE "review" ALTER COLUMN "duration_ms" SET NOT NULL;--> statement-breakpoint
-ALTER TABLE "aiMessages" ADD COLUMN "message_count" bigint NOT NULL GENERATED ALWAYS AS IDENTITY (sequence name "aiMessages_message_count_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 9223372036854775807 START WITH 1 CACHE 1);--> statement-breakpoint
-ALTER TABLE "review" ADD CONSTRAINT "completed_review_requires_commit_sha" CHECK ("review"."status" = 'completed' AND "review"."reviewed_commit_sha" IS NOT NULL);

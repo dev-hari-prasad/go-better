@@ -1,1 +1,0 @@
-ALTER TABLE "review" ALTER COLUMN "duration_ms" DROP NOT NULL;

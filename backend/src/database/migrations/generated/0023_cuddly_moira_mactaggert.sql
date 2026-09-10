@@ -1,1 +1,0 @@
-ALTER TABLE "pull_requests" ADD COLUMN "diff_content" text;

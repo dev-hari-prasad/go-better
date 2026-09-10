@@ -1,1 +1,0 @@
-ALTER TABLE "review" RENAME COLUMN "duration_md" TO "duration_ms";

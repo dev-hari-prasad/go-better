@@ -1,1 +1,0 @@
-ALTER TABLE "pull_requests" ALTER COLUMN "repository_id" DROP NOT NULL;

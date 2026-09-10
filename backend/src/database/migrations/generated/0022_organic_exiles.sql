@@ -1,1 +1,0 @@
-ALTER TABLE "aiMessages" ADD COLUMN "udpated_at" timestamp DEFAULT now() NOT NULL;

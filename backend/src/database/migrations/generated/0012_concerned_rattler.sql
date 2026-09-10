@@ -1,1 +1,0 @@
-ALTER TABLE "pull_requests" ADD COLUMN "body_blob" jsonb NOT NULL;

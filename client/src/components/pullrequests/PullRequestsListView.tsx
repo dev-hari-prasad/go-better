@@ -493,7 +493,7 @@ export const PullRequestsListView: React.FC<PullRequestsListViewProps> = ({
       </div>
 
       {/* GitHub Not Connected Banner */}
-      {isAuthenticated && !isGithubConnected && (
+      {(isAuthenticated || (typeof window !== 'undefined' && Boolean(localStorage.getItem('user_profile_email') || localStorage.getItem('gobe-user-id') || localStorage.getItem('user_db_id')))) && !isGithubConnected && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-xl bg-gradient-to-r from-[#161b22] to-[#1c2128] border border-[#30363d] shadow-sm animate-apple-fade">
           <div className="flex items-start sm:items-center gap-3">
             <div className="w-9 h-9 rounded-lg bg-[#21262d] border border-[#30363d] flex items-center justify-center shrink-0 text-zinc-300">

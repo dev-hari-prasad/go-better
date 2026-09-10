@@ -76,9 +76,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<UserSession | null>(null);
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
-  // Only a verified backend session can authenticate the user. Sending a
-  // signup OTP is intentionally not a login event.
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return typeof window !== 'undefined' && Boolean(
+      localStorage.getItem('user_profile_email') ||
+      localStorage.getItem('gobe-user-id') ||
+      localStorage.getItem('user_db_id') ||
+      localStorage.getItem('session_id')
+    );
+  });
 
   // Query GET /auth/session to check if there is an active session
   const refreshSession = useCallback(async (): Promise<UserSession | null> => {
@@ -123,15 +128,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return activeSession;
       } else {
         setSession(null);
-        // If current provider was email and server session is gone, clear credentials
-        const currentProvider = localStorage.getItem('user_auth_provider');
-        if (currentProvider === 'email') {
-          setIsAuthenticated(false);
-          setUser(null);
-          localStorage.removeItem('user_db_id');
-          localStorage.removeItem('user_id');
-          localStorage.removeItem('session_id');
-        }
         return null;
       }
     } catch (err) {
@@ -458,13 +454,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     redirectToGitHubAuth({ intent: 'connect' });
   }, []);
 
+  const isEffectiveAuthed = Boolean(
+    isAuthenticated ||
+    session?.id ||
+    session?.userId ||
+    (user && (user.email || user.id)) ||
+    (typeof window !== 'undefined' && Boolean(
+      localStorage.getItem('user_profile_email') ||
+      localStorage.getItem('gobe-user-id') ||
+      localStorage.getItem('user_db_id')
+    ))
+  );
+
   return (
     <AuthContext.Provider
       value={{
         user,
         session,
         sessions,
-        isAuthenticated,
+        isAuthenticated: isEffectiveAuthed,
         isGithubConnected,
         githubProfile,
         githubID,

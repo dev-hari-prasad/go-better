@@ -201,7 +201,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         {/* Right section: Connect GitHub (if not connected) / Sign In and Quick Chat */}
         <div className="flex items-center gap-2 justify-end">
-          {!isAuthenticated ? (
+          {!(isAuthenticated || userProfile.userId || userProfile.email || (typeof window !== 'undefined' && Boolean(localStorage.getItem('user_profile_email') || localStorage.getItem('gobe-user-id') || localStorage.getItem('user_db_id')))) ? (
             <div className="relative group flex items-center justify-center">
               <button
                 onClick={() => {

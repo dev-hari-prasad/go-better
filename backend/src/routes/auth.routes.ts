@@ -9,7 +9,7 @@ import { REDIS_KEYS } from '../lib/redis/redisKeys.ts';
 import sendEmail from '../lib/resendEmail.ts';
 import { otpEmailData } from '../constants/email.ts';
 import otpVerification from '../database/schema/otpVerification.ts';
-import { eq } from 'drizzle-orm';
+import { eq, or } from 'drizzle-orm';
 import { RESPONSE_MESSAGES } from '../constants/responseMessages.ts';
 import { error } from 'node:console';
 import { emailConfig, fromEmail } from '../config/config.ts';
@@ -996,29 +996,71 @@ router.get('/session', async (req, res) => {
         if (!sessionId && req.headers['x-session-id']) {
             sessionId = String(req.headers['x-session-id']).trim();
         }
+        const candidateIdentifier = sessionId || (req.headers['x-user-id'] as string) || (req.headers['x-user-email'] as string);
 
-        if (!sessionId) {
+        if (!sessionId && !candidateIdentifier) {
             return res.status(200).json({ authenticated: false });
         }
 
-        const sessionInfo = await db.select({
-            id: session.id,
-            userId: session.userId,
-            createdAt: session.createdAt,
-            expiresAt: session.expiresAt,
-            userAgent: session.userAgent,
-            userName: users.name,
-            userEmail: users.email,
-            loginMethod: users.loginMethod,
-            isGithubConnected: users.isGithubConnected,
-            githubProfile: users.githubProfile,
-            githubID: users.githubID,
-        })
-            .from(session)
-            .innerJoin(users, eq(users.id, session.userId))
-            .where(eq(session.id, sessionId));
+        let sess: any = null;
 
-        const sess = sessionInfo[0];
+        if (sessionId) {
+            const sessionInfo = await db.select({
+                id: session.id,
+                userId: session.userId,
+                createdAt: session.createdAt,
+                expiresAt: session.expiresAt,
+                userAgent: session.userAgent,
+                userName: users.name,
+                userEmail: users.email,
+                loginMethod: users.loginMethod,
+                isGithubConnected: users.isGithubConnected,
+                githubProfile: users.githubProfile,
+                githubID: users.githubID,
+            })
+                .from(session)
+                .innerJoin(users, eq(users.id, session.userId))
+                .where(eq(session.id, sessionId));
+
+            sess = sessionInfo[0];
+        }
+
+        // Fallback: If sessionId didn't match a session record, check if candidateIdentifier matches a user directly
+        if (!sess && candidateIdentifier) {
+            const [matchedUser] = await db
+                .select({
+                    id: users.id,
+                    name: users.name,
+                    email: users.email,
+                    loginMethod: users.loginMethod,
+                    isGithubConnected: users.isGithubConnected,
+                    githubProfile: users.githubProfile,
+                    githubID: users.githubID,
+                })
+                .from(users)
+                .where(
+                    or(
+                        eq(users.id, candidateIdentifier),
+                        eq(users.email, candidateIdentifier)
+                    )
+                )
+                .limit(1);
+
+            if (matchedUser) {
+                return res.status(200).json({
+                    authenticated: true,
+                    id: matchedUser.id,
+                    userId: matchedUser.id,
+                    userName: matchedUser.name,
+                    userEmail: matchedUser.email,
+                    loginMethod: matchedUser.loginMethod,
+                    isGithubConnected: Boolean(matchedUser.isGithubConnected || matchedUser.githubID),
+                    githubProfile: matchedUser.githubProfile ?? null,
+                    githubID: matchedUser.githubID ?? null,
+                });
+            }
+        }
+
         if (!sess) {
             return res.status(200).json({ authenticated: false });
         }

@@ -251,11 +251,23 @@ export async function resetPassword(payload: ResetPasswordPayload): Promise<void
 export async function getCurrentSession(): Promise<UserSession | null> {
   try {
     const sessionId = localStorage.getItem('session_id');
+    const userId = localStorage.getItem('user_db_id') || localStorage.getItem('user_id');
+    const userEmail = localStorage.getItem('user_profile_email') || localStorage.getItem('gobe-user-id');
+
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (sessionId) {
       headers['Authorization'] = `Bearer ${sessionId}`;
       headers['x-session-id'] = sessionId;
+    } else if (userId) {
+      headers['Authorization'] = `Bearer ${userId}`;
+      headers['x-user-id'] = userId;
+    } else if (userEmail) {
+      headers['Authorization'] = `Bearer ${userEmail}`;
+      headers['x-user-email'] = userEmail;
     }
+
+    if (userId) headers['x-user-id'] = userId;
+    if (userEmail) headers['x-user-email'] = userEmail;
 
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
       method: 'GET',
@@ -278,11 +290,23 @@ export async function getCurrentSession(): Promise<UserSession | null> {
 export async function getAllSessions(): Promise<UserSession[]> {
   try {
     const sessionId = localStorage.getItem('session_id');
+    const userId = localStorage.getItem('user_db_id') || localStorage.getItem('user_id');
+    const userEmail = localStorage.getItem('user_profile_email') || localStorage.getItem('gobe-user-id');
+
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
     if (sessionId) {
       headers['Authorization'] = `Bearer ${sessionId}`;
       headers['x-session-id'] = sessionId;
+    } else if (userId) {
+      headers['Authorization'] = `Bearer ${userId}`;
+      headers['x-user-id'] = userId;
+    } else if (userEmail) {
+      headers['Authorization'] = `Bearer ${userEmail}`;
+      headers['x-user-email'] = userEmail;
     }
+
+    if (userId) headers['x-user-id'] = userId;
+    if (userEmail) headers['x-user-email'] = userEmail;
 
     const response = await fetch(`${API_BASE_URL}/auth/sessions`, {
       method: 'GET',

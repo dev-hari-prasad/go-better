@@ -30,7 +30,7 @@ This reads `copy-env-config.json` and copies `src/.env.example` to `src/.env`. T
 | **Custom AI Endpoint Gateway** | `AI_BASE_URL` | `backend/src/.env` or Compose | Provider-specific |
 | **OpenAI Client Invocation Method**| `OPEN_AI_INTERFACE` | `backend/src/.env` or Compose | `chat` |
 | **Email Delivery (Resend API)** | `RESEND_API_KEY` | `backend/src/.env` or Compose | Unset / None |
-| **GitHub Integration** | `GITHUB_ACESSES_TOKEN`, `GITHUB_APP_*` | `backend/src/.env` or Compose | Unset / None |
+| **GitHub Integration** | `GITHUB_ACESSES_TOKEN`, `GITHUB_APP_*`, `GITHUB_WEBHOOK_VERIFICATION_SECRET` | `backend/src/.env` or Compose | Unset / None |
 | **Encryption & Auth** | `API_ENCRYPTION_KEY`, `BETTER_AUTH_URL` | `backend/src/.env` or Compose | Unset / None |
 | **Per-User Free Spend Allowance** | `perUserSpendLimit` | `backend/src/config/config.ts` | `$0.30` USD |
 | **Platform Free Model Pricing** | `goBetterFreeModels` | `backend/src/config/config.ts` | Model price map |
@@ -63,6 +63,18 @@ Create the backend file from `backend/src/.env.example` and replace every `YOUR_
 | `GITHUB_APP_CLIENT_ID` | Yes for GitHub login | Create or open a GitHub OAuth App and copy its Client ID. Set its callback URL to `<API_BASE_URL>/auth/github/callback`. |
 | `GITHUB_APP_CLIENT_SECRET` | Yes for GitHub login | Copy or generate the Client secret from the same GitHub OAuth App. Store it only in the backend environment. |
 | `GITHUB_APP_SLUG` | Yes for GitHub App links | Copy the slug from the GitHub App installation URL or app settings. |
+| `GITHUB_WEBHOOK_VERIFICATION_SECRET` | Yes for GitHub webhooks | Create a strong random secret in the GitHub webhook settings and configure the same value in the backend environment. GitHub uses it to generate the `X-Hub-Signature-256` header. |
+
+#### `GITHUB_WEBHOOK_VERIFICATION_SECRET`
+
+This secret authenticates incoming `POST /webhook` requests. The backend verifies GitHub's HMAC-SHA256 signature against the raw request body before checking the event type or writing to PostgreSQL and Redis.
+
+Configure the same secret in both places:
+
+1. In the GitHub repository or GitHub App webhook settings, enter it in the **Secret** field.
+2. In `backend/src/.env` or the production backend environment, set `GITHUB_WEBHOOK_VERIFICATION_SECRET` to the same value.
+
+Do not add the secret to the frontend, commit it to source control, or include it in logs. The `/webhook` endpoint does not require a user session because GitHub authenticates it with this signature.
 
 ### Generate an Encryption Key
 

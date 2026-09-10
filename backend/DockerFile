@@ -12,4 +12,4 @@ COPY src ./src
 COPY scripts ./scripts
 RUN pnpm build && pnpm prune --prod
 
-CMD ["pnpm", "start"]
+CMD ["sh", "-c", "node ./src/database/migrations/migrate.ts && pnpm start"]

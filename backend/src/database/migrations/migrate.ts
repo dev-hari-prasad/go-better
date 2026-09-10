@@ -1,9 +1,13 @@
 import { drizzle } from "drizzle-orm/node-postgres"
 import { migrate } from 'drizzle-orm/node-postgres/migrator';
-import 'dotenv/config'
 import { log } from "node:console";
+import '../../config/env.ts'
 
-const databaseUrl = process.env.DATABASE_URL || "postgresql://neondb_owner:npg_T9XcWohSgOL5@ep-frosty-sky-a1k7c990-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require";
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+    throw new Error('DATABASE_URL is required to run database migrations');
+}
 
 const db = drizzle(databaseUrl);
 

@@ -10,7 +10,7 @@ services:
     environment:
       NODE_ENV: production
     env_file:
-      - path: ./backend/.env
+      - path: ./backend/src/.env
         required: false
     restart: unless-stopped
     networks:

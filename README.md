@@ -138,11 +138,11 @@ docker run -d --name gobetter-redis -p 6379:6379 redis:7-alpine
 
 ### 2. Configure Environment Files
 ```bash
-cp backend/.env.example backend/.env
+cp backend/src/.env.example backend/src/.env
 cp client/.env.example client/.env
 ```
 
-Fill in required credentials in `backend/.env` (Postgres URL, Redis URL, AI Provider API key).
+Fill in required credentials in `backend/src/.env` (Postgres URL, Redis URL, AI Provider API key).
 
 ### 3. Install Dependencies & Run Migrations
 ```bash

@@ -141,4 +141,4 @@ To build the frontend image directly:
 docker compose build frontend
 ```
 
-The backend image uses Node 22 and the frontend image uses a Node 22 build stage with Nginx as the runtime server.
+The backend image uses Node 22. On container startup, it applies pending Drizzle migrations before starting the API and its workers. The frontend image uses a Node 22 build stage with Nginx as the runtime server. Compose loads backend environment values from `backend/src/.env`; hosted deployments should inject the same variables through the platform's secret configuration.

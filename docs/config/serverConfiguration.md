@@ -12,8 +12,12 @@ From the `backend/` directory, scaffold the runtime env file in one command:
 pnpm install
 pnpm run copy-env
 ```
-This reads `copy-env-config.json` and copies `src/.env.example` to `src/.env`. The backend loads `src/.env` at startup; fill in the generated placeholders before running the server. Docker Compose can additionally load `backend/.env` when that file exists.
+This reads `copy-env-config.json` and copies `src/.env.example` to `src/.env`. The backend loads `src/.env` at startup; fill in the generated placeholders before running the server. Docker Compose can additionally load `backend/src/.env` when that file exists.
 </Tip>
+
+<Note>
+  The production backend container runs pending Drizzle migrations before starting the API. Set `DATABASE_URL` in the container environment before startup. Keep migration execution in the container's startup command rather than the image build so the image can be built without database access.
+</Note>
 
 ---
 

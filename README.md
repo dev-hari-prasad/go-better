@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="./docs/go-better-banner.png" alt="GoBetter Banner" width="100%" />
+
 # GoBetter
 
 ### Autonomous AI Code Reviews Engineered for High-Scale Engineering Teams

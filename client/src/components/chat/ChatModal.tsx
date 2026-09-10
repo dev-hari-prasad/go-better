@@ -474,8 +474,8 @@ export const ChatModal: React.FC<ChatModalProps> = ({
             </div>
           )}
           <div className="w-full bg-[#161b22] border border-[#30363d] rounded-[24px] p-3 flex flex-col transition-all relative min-h-[96px] sm:min-h-[104px]">
-            {/* Chromatic Rim & Moving Aurora (Same Glow) */}
-            <ChatBottomLightBeam active={true} showBump={chatHistory.length === 0} />
+            {/* Chromatic Rim & Moving Aurora (Stationary / toned down, only visible before messages exist) */}
+            <ChatBottomLightBeam active={chatHistory.length === 0} showBump={chatHistory.length === 0} />
 
             {/* Textarea on top: more height permanently */}
             <textarea

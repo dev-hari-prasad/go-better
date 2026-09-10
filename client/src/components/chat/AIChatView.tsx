@@ -597,8 +597,8 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
             {!isMultiLine ? (
               /* Single Line Pill Bar (Matching media_1788721543789.png) */
               <div className="w-full max-w-[800px] mx-auto bg-[#161b22] border border-[#30363d] rounded-[24px] p-1.5 flex items-center gap-2 relative">
-                {/* Shiny Edges & Chromatic Rim (Stationary, No Moving Glow) */}
-                <ChatBottomLightBeam active={true} showBump={false} />
+                {/* Shiny Edges & Chromatic Rim (Stationary, Only visible before messages exist) */}
+                <ChatBottomLightBeam active={chatHistory.length === 0} showBump={false} />
 
                 {/* Select PR Dropdown (Summary + Search) on Left */}
                 <div className="relative shrink-0 z-10">
@@ -653,8 +653,8 @@ export const AIChatView: React.FC<AIChatViewProps> = ({
             ) : (
               /* Multi-line Layout (Matching media_1788721557977.png) */
               <div className="w-full max-w-[800px] mx-auto bg-[#161b22] border border-[#30363d] rounded-[24px] p-2.5 flex flex-col relative">
-                {/* Shiny Edges & Chromatic Rim (Stationary, No Moving Glow) */}
-                <ChatBottomLightBeam active={true} showBump={false} />
+                {/* Shiny Edges & Chromatic Rim (Stationary, Only visible before messages exist) */}
+                <ChatBottomLightBeam active={chatHistory.length === 0} showBump={false} />
 
                 {/* Multi-line textarea starting at top-left */}
                 <textarea

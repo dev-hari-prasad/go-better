@@ -26,6 +26,7 @@ export async function fetchWorkspaceSettings(tab: string = 'aiSettings'): Promis
         'Content-Type': 'application/json',
         Authorization: userId,
       },
+      credentials: 'include',
     });
 
     if (!response.ok) return null;
@@ -75,6 +76,7 @@ export async function patchWorkspaceSettings(
         'Content-Type': 'application/json',
         Authorization: userId,
       },
+      credentials: 'include',
       body: JSON.stringify(payload),
     });
 

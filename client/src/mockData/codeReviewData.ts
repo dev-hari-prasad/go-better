@@ -3,9 +3,9 @@ import { Repository, PullRequest, DiffFile, AIFinding, ActivityEvent, UserSettin
 export const mockRepositories: Repository[] = [
   {
     id: 'repo-1',
-    name: 'hono-rabbit',
+    name: 'go-better',
     owner: 'acme-corp',
-    fullName: 'acme-corp/hono-rabbit',
+    fullName: 'acme-corp/go-better',
     defaultBranch: 'main',
     isPrivate: true,
     autoReviewEnabled: true,
@@ -48,7 +48,7 @@ export const mockPullRequests: PullRequest[] = [
     number: 142,
     title: 'Refactor Auth middleware & session validation logic',
     repositoryId: 'repo-1',
-    repoFullName: 'acme-corp/hono-rabbit',
+    repoFullName: 'acme-corp/go-better',
     author: {
       name: 'Alex Mercer',
       username: 'alexmercer',
@@ -81,7 +81,7 @@ export const mockPullRequests: PullRequest[] = [
     number: 141,
     title: 'Optimize Prisma query batching & connection pooling',
     repositoryId: 'repo-1',
-    repoFullName: 'acme-corp/hono-rabbit',
+    repoFullName: 'acme-corp/go-better',
     author: {
       name: 'Elena Rostova',
       username: 'erostova',
@@ -142,7 +142,7 @@ export const mockPullRequests: PullRequest[] = [
     number: 138,
     title: 'Update core dependency react and react-dom to v18',
     repositoryId: 'repo-1',
-    repoFullName: 'acme-corp/hono-rabbit',
+    repoFullName: 'acme-corp/go-better',
     author: {
       name: 'Sarah Chen',
       username: 'schen',
@@ -312,7 +312,7 @@ export const mockFindings: AIFinding[] = [
     },
     status: 'open',
     createdAt: '1 hour ago',
-    authorAI: 'CodeRabbit AI (Claude 3.5 Sonnet)',
+    authorAI: 'Go Better AI (Claude 3.5 Sonnet)',
   },
   {
     id: 'finding-2',
@@ -339,7 +339,7 @@ export const mockFindings: AIFinding[] = [
     },
     status: 'open',
     createdAt: '1 hour ago',
-    authorAI: 'CodeRabbit AI (Claude 3.5 Sonnet)',
+    authorAI: 'Go Better AI (Claude 3.5 Sonnet)',
   },
   {
     id: 'finding-3',
@@ -368,7 +368,7 @@ export const mockFindings: AIFinding[] = [
     },
     status: 'open',
     createdAt: '1 hour ago',
-    authorAI: 'CodeRabbit AI (Claude 3.5 Sonnet)',
+    authorAI: 'Go Better AI (Claude 3.5 Sonnet)',
   },
   {
     id: 'finding-4',
@@ -395,7 +395,7 @@ export const mockFindings: AIFinding[] = [
     },
     status: 'open',
     createdAt: '1 hour ago',
-    authorAI: 'CodeRabbit AI (Claude 3.5 Sonnet)',
+    authorAI: 'Go Better AI (Claude 3.5 Sonnet)',
   },
 ];
 
@@ -404,12 +404,12 @@ export const mockActivityEvents: ActivityEvent[] = [
     id: 'act-1',
     type: 'review_completed',
     actor: {
-      name: 'CodeRabbit AI',
-      username: 'coderabbit-ai',
+      name: 'Go Better AI',
+      username: 'gobetter-ai',
       isAI: true,
     },
     target: 'PR #142',
-    repository: 'acme-corp/hono-rabbit',
+    repository: 'acme-corp/go-better',
     description: 'Completed automated code review. Flagged 1 Critical security flaw and 2 Warnings.',
     timestamp: '12 minutes ago',
   },
@@ -422,7 +422,7 @@ export const mockActivityEvents: ActivityEvent[] = [
       avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=100&auto=format&fit=crop&q=80',
     },
     target: 'PR #141',
-    repository: 'acme-corp/hono-rabbit',
+    repository: 'acme-corp/go-better',
     description: 'Applied AI suggestion: "Replace N+1 query loop with Prisma findMany batching".',
     timestamp: '3 hours ago',
   },
@@ -435,7 +435,7 @@ export const mockActivityEvents: ActivityEvent[] = [
       avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
     },
     target: 'PR #142',
-    repository: 'acme-corp/hono-rabbit',
+    repository: 'acme-corp/go-better',
     description: 'Opened pull request "Refactor Auth middleware & session validation logic".',
     timestamp: '2 hours ago',
   },
@@ -523,7 +523,7 @@ export const mockLatestCodeReviews: LatestCodeReview[] = [
     pullRequestId: 'pr-142',
     prNumber: 142,
     prTitle: 'Refactor Auth middleware & session validation logic',
-    repoFullName: 'acme-corp/hono-rabbit',
+    repoFullName: 'acme-corp/go-better',
     status: 'changes_requested',
     score: 74,
     summary: 'Structural improvements to JWT session caching. 1 critical timing vulnerability identified in crypto token comparison routine.',

@@ -71,9 +71,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<UserSession | null>(null);
   const [sessions, setSessions] = useState<UserSession[]>([]);
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return localStorage.getItem('showMarketingPopup') === 'false';
-  });
+  // Only a verified backend session can authenticate the user. Sending a
+  // signup OTP is intentionally not a login event.
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   // Query GET /auth/session to check if there is an active session
   const refreshSession = useCallback(async (): Promise<UserSession | null> => {
@@ -168,7 +168,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: storedEmail || '',
           provider: storedProvider,
         });
-        setIsAuthenticated(localStorage.getItem('showMarketingPopup') === 'false');
       } else {
         setUser(null);
         setSession(null);
@@ -186,10 +185,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // 1. POST /auth/signup
   const signup = useCallback(async (payload: SignupPayload): Promise<AuthApiResponse> => {
-    const res = await apiSignup(payload);
-    localStorage.setItem('showMarketingPopup', 'false');
-    setIsAuthenticated(true);
-    return res;
+    return apiSignup(payload);
   }, []);
 
   // 2. POST /auth/verify-email

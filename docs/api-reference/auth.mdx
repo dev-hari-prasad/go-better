@@ -13,6 +13,8 @@ All authentication endpoints are mounted under `/auth`.
 
 The backend redirects to GitHub with a random flow state, PKCE challenge, and the `user:email` OAuth permission. Configure the OAuth App callback URL as `<API_BASE_URL>/auth/github/callback`. The callback exchanges the code server-side, then redirects to the client with only `github_auth=success` or `github_auth=error`. The session itself stays in an HTTP-only cookie and is never included in the redirect URL.
 
+All email and GitHub sign-in paths issue the same `Secure`, `HttpOnly`, `SameSite=None` session cookie when `API_BASE_URL` uses HTTPS. The cookie is owned by the API host (for example, `api.example.com`), not the frontend host, and is automatically included only on credentialed API requests.
+
 For a GitHub App user-access-token integration rather than an OAuth App, set `GITHUB_OAUTH_SCOPE` to an empty value and grant the app's **Email addresses: Read-only** user permission in GitHub.
 
 ## Endpoints
@@ -105,7 +107,7 @@ Updates the account password for an authenticated session or verified user.
 ### 7. Get Current Session
 `GET /auth/session`
 
-Retrieves the caller's active session metadata and user ID from the HTTP-only cookie.
+Retrieves the caller's active session metadata and user ID from the HTTP-only cookie. When the caller has no active session, it returns `200` with `{ "authenticated": false }`; this is an expected browser state before login, not a missing route.
 
 ---
 

@@ -97,7 +97,7 @@ export interface AIFinding {
   };
   status: 'open' | 'resolved' | 'dismissed';
   createdAt: string;
-  authorAI: string; // e.g. "CodeRabbit (Claude 3.5 Sonnet)"
+  authorAI: string; // e.g. "Go Better (Claude 3.5 Sonnet)"
 }
 
 export interface ActivityEvent {

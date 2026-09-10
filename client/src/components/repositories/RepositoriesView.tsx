@@ -319,7 +319,7 @@ export const RepositoriesView: React.FC<RepositoriesViewProps> = ({ repositories
 
               <div className="p-3 bg-[#0d1117] border border-[#232530] rounded-lg text-xs text-zinc-400 space-y-1">
                 <p className="font-semibold text-zinc-200">Automated Webhook Integration</p>
-                <p>CodeRabbit will automatically install PR webhooks and run reviews on new commits.</p>
+                <p>Go Better will automatically install PR webhooks and run reviews on new commits.</p>
               </div>
 
               <div className="flex items-center justify-end gap-3 pt-2">

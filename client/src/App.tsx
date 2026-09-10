@@ -121,6 +121,7 @@ export const App: React.FC = () => {
   const [repositories] = useState<Repository[]>(mockRepositories);
   const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
   const [isLoadingPullRequests, setIsLoadingPullRequests] = useState<boolean>(true);
+  const [pullRequestsError, setPullRequestsError] = useState<boolean>(false);
   // Tracks the temp user id used by the PR list view so we refetch when it changes
   const [authUserId, setAuthUserId] = useState<string>(() => getAuthUserId());
   const [findings, setFindings] = useState<AIFinding[]>([]);
@@ -421,11 +422,13 @@ export const App: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     setIsLoadingPullRequests(true);
+    setPullRequestsError(false);
 
     fetchPullRequestList(authUserId)
       .then((prs) => {
         if (cancelled) return;
         setPullRequests(prs);
+        setPullRequestsError(false);
         if (prs.length > 0) {
           const matchedByRoute = pendingPrId
             ? prs.find(
@@ -436,7 +439,9 @@ export const App: React.FC = () => {
         }
       })
       .catch(() => {
-        // Empty on failure
+        if (!cancelled) {
+          setPullRequestsError(true);
+        }
       })
       .finally(() => {
         if (!cancelled) setIsLoadingPullRequests(false);
@@ -801,6 +806,7 @@ export const App: React.FC = () => {
                   findings={findings}
                   activities={activities}
                   isLoading={isLoadingPullRequests}
+                  hasError={pullRequestsError}
                   authUserId={authUserId}
                   onSelectPR={setSelectedPR}
                   onNavigateToTab={(tab, filter) => {
@@ -884,7 +890,7 @@ export const App: React.FC = () => {
       {isScanning && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-apple-fade">
           <div className="bg-[#16171d] border border-[#232530] rounded-2xl p-8 max-w-md w-full shadow-2xl animate-apple-scale">
-            <LoadingState message="CodeRabbit AI Review Running" step={scanStep} />
+            <LoadingState message="Go Better AI Review Running" step={scanStep} />
           </div>
         </div>
       )}

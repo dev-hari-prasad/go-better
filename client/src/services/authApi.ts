@@ -109,7 +109,6 @@ export async function signup(payload: SignupPayload): Promise<AuthApiResponse> {
     throw new Error(errorMsg);
   }
 
-  localStorage.setItem('showMarketingPopup', 'false');
   return body;
 }
 

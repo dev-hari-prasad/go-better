@@ -37,7 +37,7 @@ export const SummaryView = () => {
         <MetricCard title="Median Time" value="0" />
         <MetricCard title="Reviewer Time Saved" value="No data" />
         
-        <MetricCard title="CodeRabbit Review Comments" value="0" />
+        <MetricCard title="Go Better Review Comments" value="0" />
         <MetricCard title="Review Comments by Severity" value="No data" />
         <MetricCard title="Severity Distribution" value="No data" />
       </div>

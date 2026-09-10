@@ -30,6 +30,7 @@ import {
 const router: express.Router = express.Router()
 
 const OAUTH_COOKIE_MAX_AGE = 10 * 60 * 1000;
+const SESSION_COOKIE_MAX_AGE = 30 * 24 * 60 * 60 * 1000;
 
 type PendingGitHubOAuth = {
     state: string;
@@ -303,7 +304,7 @@ router.get('/github/callback', async (req, res) => {
         }
 
         return clearOAuthCookies(res)
-            .cookie('session', sessionToken, cookieOptions(30 * 24 * 60 * 60 * 1000))
+            .cookie('session', sessionToken, cookieOptions(SESSION_COOKIE_MAX_AGE))
             .redirect(authRedirectUrl(targetClientUrl, 'success'));
     } catch (err) {
         console.error('[AUTH-GITHUB] Callback failed', err);
@@ -509,12 +510,7 @@ router.post('/verify-email', async (req, res) => {
 
                 return res
                     .status(200)
-                    .cookie('session', sessionToken, {
-                        httpOnly: true,
-                        secure: true,
-                        sameSite: 'lax',
-                        maxAge: 30 * 24 * 60 * 60 * 1000,
-                    })
+                    .cookie('session', sessionToken, cookieOptions(SESSION_COOKIE_MAX_AGE))
                     .json({
                         message: RESPONSE_MESSAGES.OTP_VERIFIED || 'Email verified successfully',
                         user: {
@@ -561,12 +557,7 @@ router.post('/verify-email', async (req, res) => {
 
                 return res
                     .status(200)
-                    .cookie('session', sessionToken, {
-                        httpOnly: true,
-                        secure: true,
-                        sameSite: 'lax',
-                        maxAge: 30 * 24 * 60 * 60 * 1000,
-                    })
+                    .cookie('session', sessionToken, cookieOptions(SESSION_COOKIE_MAX_AGE))
                     .json({
                     message: RESPONSE_MESSAGES.OTP_VERIFIED || 'Email verified successfully',
                     user: {
@@ -782,12 +773,7 @@ router.patch('/verify-forgot-password', async(req, res) => {
 
                 return res
                     .status(200)
-                    .cookie('session', sessionToken, {
-                        httpOnly: true,
-                        secure: true,
-                        sameSite: 'lax',
-                        maxAge: 30 * 24 * 60 * 60 * 1000,
-                    })
+                    .cookie('session', sessionToken, cookieOptions(SESSION_COOKIE_MAX_AGE))
                     .json({
                         message: 'Password reset successfully',
                         updatePassword
@@ -856,12 +842,7 @@ router.post('/login', async(req, res) => {
                 const session = await createSession(getUserInfo[0]!.id, userAgent)
                 
                 return res.status(200)
-                    .cookie('session', session, {
-                        httpOnly: true,
-                        secure: true,
-                        sameSite: 'lax',
-                        maxAge: 30 * 24 * 60 * 60 * 1000,
-                    })
+                    .cookie('session', session, cookieOptions(SESSION_COOKIE_MAX_AGE))
                     .json({
                         message: 'Login successful'
                     })
@@ -896,9 +877,7 @@ router.get('/session', async (req, res) => {
         }
 
         if (!sessionId) {
-            return res.status(400).json({
-                error: API_RESPONSE_MESSAGES[400]
-            });
+            return res.status(200).json({ authenticated: false });
         }
 
         const sessionInfo = await db.select({
@@ -916,8 +895,8 @@ router.get('/session', async (req, res) => {
             .where(eq(session.id, sessionId));
 
         return sessionInfo.length === 0
-            ? res.status(404).json(API_RESPONSE_MESSAGES[404])
-            : res.status(200).json(sessionInfo[0]);
+            ? res.status(200).json({ authenticated: false })
+            : res.status(200).json({ authenticated: true, ...sessionInfo[0] });
     } catch(err){
         return res.status(500).json({
             error: API_RESPONSE_MESSAGES[500]

@@ -41,6 +41,7 @@ export async function fetchByokProviders(): Promise<ByokProviderRecord[]> {
     const response = await fetch(`${API_BASE_URL}/byok/providers`, {
       method: 'GET',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
     });
 
     if (!response.ok) return [];
@@ -57,6 +58,7 @@ export async function deleteByokProvider(providerId: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/byok/providers/${encodeURIComponent(providerId)}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
     });
 
     if (!response.ok && response.status !== 204 && response.status !== 404) {
@@ -76,6 +78,7 @@ export async function patchByokProvider(
     const response = await fetch(`${API_BASE_URL}/byok/providers/${encodeURIComponent(providerId)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(updates),
     });
 
@@ -101,6 +104,7 @@ export async function fetchModelList(payload: FetchModelListPayload): Promise<an
     const response = await fetch(`${API_BASE_URL}/byok/model-list`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({
         modelProviderName: payload.modelProviderName || payload.modelProvider,
         apiKey: payload.apiKey,
@@ -166,6 +170,7 @@ export async function saveByokKey(payload: ByokKeyPayload): Promise<any> {
     response = await fetch(`${API_BASE_URL}/byok`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(payload),
     });
   } catch {
@@ -185,4 +190,3 @@ export async function saveByokKey(payload: ByokKeyPayload): Promise<any> {
 
   return await response.json().catch(() => ({}));
 }
-

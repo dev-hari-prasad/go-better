@@ -95,7 +95,11 @@ export async function fetchRecentConversations(
   let response: Response;
 
   try {
-    response = await fetch(url.toString(), { method: 'GET', signal });
+    response = await fetch(url.toString(), {
+      method: 'GET',
+      credentials: 'include',
+      signal,
+    });
   } catch (err) {
     if (err instanceof DOMException && err.name === 'AbortError') throw err;
     throw new Error('Could not reach the server. Is the backend running?');
@@ -131,6 +135,7 @@ export async function fetchConversationMessages(
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(updatedAt ? { updatedAt } : {}),
         signal,
       }
@@ -169,6 +174,7 @@ export async function streamAiChat(
     response = await fetch(`${API_BASE_URL}/conversation/chat`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(payload),
       signal: handlers.signal,
     });
@@ -261,6 +267,7 @@ export async function submitMessageFeedback(
     response = await fetch(`${API_BASE_URL}/conversation/feedback`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify(payload),
       signal,
     });
@@ -275,4 +282,3 @@ export async function submitMessageFeedback(
 
   return (await response.json().catch(() => ({ message: 'updated' }))) as { message: string };
 }
-

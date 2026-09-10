@@ -361,6 +361,7 @@ export async function triggerPullRequestReview(
           'Content-Type': 'application/json',
           Authorization: userId || getAuthUserId(),
         },
+        credentials: 'include',
         body: JSON.stringify({ prId }),
       }
     );
@@ -406,6 +407,7 @@ export async function fetchPullRequestReview(
           'Content-Type': 'application/json',
           Authorization: userId,
         },
+        credentials: 'include',
       }
     );
   } catch {
@@ -459,6 +461,7 @@ export async function fetchLatestReviews(
       'Content-Type': 'application/json',
       Authorization: userId,
     },
+    credentials: 'include',
   });
 
   if (!response.ok) {
@@ -612,6 +615,7 @@ export async function fetchPullRequestList(
         'Content-Type': 'application/json',
         Authorization: userId,
       },
+      credentials: 'include',
     });
   } catch {
     throw new Error('Could not reach the server. Is the backend running?');
@@ -682,6 +686,7 @@ export async function fetchPullRequestSummaryList(
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include',
     });
   } catch {
     throw new Error('Could not reach the server. Is the backend running?');
@@ -715,4 +720,3 @@ export async function fetchPullRequestSummaryList(
     createdAt: typeof item.createdAt === 'string' ? item.createdAt : undefined,
   }));
 }
-

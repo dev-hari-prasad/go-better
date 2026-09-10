@@ -193,23 +193,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         {/* Right section: User session indicator / Sign In and Quick Chat */}
         <div className="flex items-center gap-2 justify-end">
-          <div className="relative group flex items-center justify-center">
-            {localStorage.getItem('showMarketingPopup') === 'false' && (userProfile.userId || userProfile.email) ? (
-              <button
-                onClick={() => {
-                  if (onTabChange) {
-                    onTabChange('settings');
-                  } else {
-                    window.dispatchEvent(new CustomEvent('open-profile-modal'));
-                  }
-                }}
-                className="flex items-center gap-1.5 px-2.5 h-8 rounded-lg bg-[#16171d] hover:bg-[#20222a] border border-[#232530] hover:border-[#c0f200]/40 text-xs text-zinc-200 transition-all cursor-pointer shadow-xs"
-                title={`Authenticated as ${userProfile.name || userProfile.email} - click to view settings`}
-              >
-                <span className="w-2 h-2 rounded-full bg-[#c0f200] animate-pulse shrink-0" />
-                <span className="max-w-[120px] truncate font-medium">{userProfile.name || userProfile.email.split('@')[0]}</span>
-              </button>
-            ) : (
+          {!(localStorage.getItem('showMarketingPopup') === 'false' && (userProfile.userId || userProfile.email)) && (
+            <div className="relative group flex items-center justify-center">
               <button
                 onClick={() => {
                   if (onOpenAuth) {
@@ -224,8 +209,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 <GitHubDark className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:scale-110" />
                 <span>Login/Sign up</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
           <div ref={quickChatRef} className="relative group/quick-chat flex items-center justify-center">
             <button

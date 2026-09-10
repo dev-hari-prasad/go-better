@@ -24,6 +24,7 @@ interface OverviewDashboardProps {
   findings?: AIFinding[];
   activities?: any[];
   isLoading?: boolean;
+  hasError?: boolean;
   authUserId?: string;
   onSelectPR: (pr: PullRequest) => void;
   onNavigateToTab: (tab: any, filter?: string) => void;
@@ -75,6 +76,7 @@ function formatRelativeTime(dateStr?: string): string {
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   pullRequests,
   isLoading = false,
+  hasError = false,
   authUserId,
   onSelectPR,
   onNavigateToTab,
@@ -111,6 +113,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   const [chatInput, setChatInput] = useState('');
   const [latestReviews, setLatestReviews] = useState<LatestReviewItem[]>([]);
   const [isLoadingReviews, setIsLoadingReviews] = useState<boolean>(true);
+  const [reviewFetchError, setReviewFetchError] = useState<boolean>(false);
   const { activeModel } = useModelPicker();
 
   useEffect(() => {
@@ -120,19 +123,23 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
     if (!currentUserId) {
       setLatestReviews([]);
       setIsLoadingReviews(false);
+      setReviewFetchError(false);
       return;
     }
 
     setIsLoadingReviews(true);
+    setReviewFetchError(false);
     fetchLatestReviews(currentUserId)
       .then((items) => {
         if (mounted) {
           setLatestReviews(items);
+          setReviewFetchError(false);
         }
       })
       .catch(() => {
         if (mounted) {
           setLatestReviews([]);
+          setReviewFetchError(true);
         }
       })
       .finally(() => {
@@ -321,9 +328,13 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                   <ReviewSkeletonRow />
                   <ReviewSkeletonRow />
                 </>
+              ) : reviewFetchError ? (
+                <div className="p-6 text-center text-xs text-rose-400/90">
+                  Unable to load code reviews right now. Please check your connection or refresh the page.
+                </div>
               ) : latestReviews.length === 0 ? (
-                <div className="p-6 text-center text-xs text-zinc-500">
-                  No code reviews found.
+                <div className="p-6 text-center text-xs text-zinc-400">
+                  No code reviews found yet. Code reviews will appear here later once incoming pull requests are analyzed.
                 </div>
               ) : (
                 latestReviews.slice(0, 3).map((review) => {
@@ -417,9 +428,13 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                   <PullRequestSkeletonRow />
                   <PullRequestSkeletonRow />
                 </>
+              ) : hasError ? (
+                <div className="p-6 text-center text-xs text-rose-400/90">
+                  Unable to load pull requests right now. Please check your connection or refresh the page.
+                </div>
               ) : displayedPRs.length === 0 ? (
-                <div className="p-6 text-center text-xs text-zinc-500">
-                  No pull requests found.
+                <div className="p-6 text-center text-xs text-zinc-400">
+                  No pull requests found yet. Pull requests will appear here later once your repositories are connected.
                 </div>
               ) : (
                 displayedPRs.map((pr, idx) => (
@@ -458,9 +473,13 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                   <PullRequestSkeletonRow />
                   <PullRequestSkeletonRow />
                 </>
+              ) : hasError ? (
+                <div className="p-6 text-center text-xs text-rose-400/90">
+                  Unable to load old pull requests right now.
+                </div>
               ) : oldPRs.length === 0 ? (
-                <div className="p-6 text-center text-xs text-zinc-500">
-                  No old pull requests needing attention.
+                <div className="p-6 text-center text-xs text-zinc-400">
+                  No old pull requests needing attention. Stale or pending pull requests will appear here later.
                 </div>
               ) : (
                 oldPRs.map((pr) => (

@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" width="24" height="24">
+  <defs>
+    <linearGradient id="gobe-ico-left" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#d8ff43" />
+      <stop offset="100%" stop-color="#c0f200" />
+    </linearGradient>
+    <linearGradient id="gobe-ico-right" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#a5d800" />
+      <stop offset="100%" stop-color="#769d00" />
+    </linearGradient>
+    <linearGradient id="gobe-ico-bottom" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#88b300" />
+      <stop offset="100%" stop-color="#516e00" />
+    </linearGradient>
+
+    <style>
+      @keyframes gobeFacetLeftLight {
+        0% { opacity: 1; filter: brightness(1); }
+        6% { opacity: 0.12; filter: brightness(0.3); }
+        12% { opacity: 1; filter: brightness(1.85); }
+        18% { opacity: 0.2; filter: brightness(0.4); }
+        25% { opacity: 1; filter: brightness(2.1); }
+        40% { opacity: 0.65; filter: brightness(1.2); }
+        54% { opacity: 1; filter: brightness(1.7); }
+        75% { opacity: 0.95; filter: brightness(1.15); }
+        100% { opacity: 1; filter: brightness(1); }
+      }
+      @keyframes gobeFacetRightLight {
+        0% { opacity: 1; filter: brightness(1); }
+        9% { opacity: 0.15; filter: brightness(0.3); }
+        15% { opacity: 1; filter: brightness(1.8); }
+        27% { opacity: 0.1; filter: brightness(0.25); }
+        34% { opacity: 1; filter: brightness(2.0); }
+        48% { opacity: 0.55; filter: brightness(1.1); }
+        64% { opacity: 1; filter: brightness(1.7); }
+        84% { opacity: 0.9; filter: brightness(1.1); }
+        100% { opacity: 1; filter: brightness(1); }
+      }
+      @keyframes gobeFacetBottomLight {
+        0% { opacity: 1; filter: brightness(1); }
+        4% { opacity: 0.08; filter: brightness(0.2); }
+        13% { opacity: 1; filter: brightness(1.7); }
+        22% { opacity: 0.25; filter: brightness(0.5); }
+        31% { opacity: 0.9; filter: brightness(1.5); }
+        43% { opacity: 0.12; filter: brightness(0.3); }
+        56% { opacity: 1; filter: brightness(1.95); }
+        72% { opacity: 1; filter: brightness(1.4); }
+        100% { opacity: 1; filter: brightness(1); }
+      }
+      /* Auto-plays blinking effect on initial page open */
+      .gobe-facet-left {
+        animation: gobeFacetLeftLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: filter 0.15s ease, opacity 0.15s ease;
+      }
+      .gobe-facet-right {
+        animation: gobeFacetRightLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: filter 0.15s ease, opacity 0.15s ease;
+      }
+      .gobe-facet-bottom {
+        animation: gobeFacetBottomLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: filter 0.15s ease, opacity 0.15s ease;
+      }
+
+      /* Re-triggers blinking on hover without drop-shadow glow */
+      svg:hover .gobe-facet-left {
+        animation: gobeFacetLeftLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      svg:hover .gobe-facet-right {
+        animation: gobeFacetRightLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      svg:hover .gobe-facet-bottom {
+        animation: gobeFacetBottomLight 1.8s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+    </style>
+  </defs>
+
+  <g class="gobe-icon-group">
+    <path
+      d="M12 2.59009V13.6101L2.65 20.1501C1.8 19.1401 1.75 17.6101 2.7 15.9001L5.82 10.2901L8.76 5.00009C9.65 3.40009 10.82 2.59009 12 2.59009Z"
+      fill="url(#gobe-ico-left)"
+      class="gobe-facet-left"
+    />
+    <path
+      d="M21.3504 20.1501C20.7004 20.9401 19.5704 21.4101 18.0604 21.4101H5.94039C4.43039 21.4101 3.30039 20.9401 2.65039 20.1501L12.0004 13.6101L21.3504 20.1501Z"
+      fill="url(#gobe-ico-bottom)"
+      class="gobe-facet-bottom"
+    />
+    <path
+      d="M21.35 20.1501L12 13.6101V2.59009C13.18 2.59009 14.35 3.40009 15.24 5.00009L18.18 10.2901L21.3 15.9001C22.25 17.6101 22.2 19.1401 21.35 20.1501Z"
+      fill="url(#gobe-ico-right)"
+      class="gobe-facet-right"
+    />
+  </g>
+</svg>

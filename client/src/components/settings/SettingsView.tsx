@@ -100,7 +100,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSaveSett
         </CardHeader>
         <CardBody className="p-6 space-y-4">
           <p className="text-xs text-zinc-400">
-            Define custom guidelines for CodeRabbit to enforce across all pull requests in this workspace.
+            Define custom guidelines for Go Better to enforce across all pull requests in this workspace.
           </p>
 
           {/* Quick Presets */}

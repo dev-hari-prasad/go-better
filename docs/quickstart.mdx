@@ -33,13 +33,13 @@ GoBetter uses PostgreSQL for primary data storage and Redis for BullMQ task queu
 <CodeGroup>
 ```bash Docker
 # Start PostgreSQL (Port 5432) and Redis (Port 6379)
-docker run -d --name gobetter-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=gobetter_db -p 5432:5432 postgres:16
+docker run -d --name gobetter-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=gobetter_db -p 5432:5432 postgres:17
 docker run -d --name gobetter-redis -p 6379:6379 redis:7-alpine
 ```
 
 ```bash Local Service
 # If running natively
-brew services start postgresql@16
+brew services start postgresql@17
 brew services start redis
 ```
 </CodeGroup>

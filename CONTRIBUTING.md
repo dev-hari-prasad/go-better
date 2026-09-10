@@ -1,4 +1,4 @@
-﻿# Contributing to GoBetter
+# Contributing to GoBetter
 
 Thank you for your interest in contributing to **GoBetter**! We are building an autonomous, high-signal AI code review engine designed to eliminate nitpicks and catch real architectural defects, concurrency deadlocks, memory leaks, and security vulnerabilities before code hits production.
 
@@ -62,11 +62,11 @@ cd go-better
 
 ### 2. Start Supporting Infrastructure
 
-Launch PostgreSQL 16 and Redis 7 in detached containers:
+Launch PostgreSQL 17/18 and Redis 7 in detached containers:
 
 ```bash
 # Start PostgreSQL (Port 5432)
-docker run -d --name gobetter-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=gobetter_db -p 5432:5432 postgres:16
+docker run -d --name gobetter-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=gobetter_db -p 5432:5432 postgres:17
 
 # Start Redis (Port 6379)
 docker run -d --name gobetter-redis -p 6379:6379 redis:7-alpine

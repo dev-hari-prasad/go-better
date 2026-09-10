@@ -12,7 +12,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
 [![BullMQ](https://img.shields.io/badge/BullMQ-Distributed_Queues-FF4438?style=for-the-badge&logo=redis&logoColor=white)](https://bullmq.io/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17%2F18-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Drizzle ORM](https://img.shields.io/badge/Drizzle_ORM-Postgres-C5F74F?style=for-the-badge&logo=drizzle&logoColor=black)](https://orm.drizzle.team/)
 
 <p align="center">
@@ -27,19 +27,17 @@
 
 ---
 
-## The Problem: AI Code Review Noise vs. Real Defect Detection
+## Zero Noise &bull; Deep Defect Detection
 
-Most AI code review bots on the market today function as glorified linters—flooding pull requests with pedantic style comments, cosmetic renaming suggestions, and import ordering nitpicks. Engineers ignore them, PR turnaround slows down, and critical flaws slip through.
+Most AI review bots act as glorified linters—spamming PRs with pedantic style nitpicks and cosmetic renames. Engineers tune them out, review turnaround stalls, and real flaws slip through.
 
-**GoBetter was engineered from the ground up to solve this.**
+**GoBetter eliminates the noise.** Operating as an autonomous senior reviewer, it performs deep structural AST diff inspection to catch critical flaws before production:
+- ⚡ **Concurrency races & thread synchronization hazards**
+- 🛡️ **Security vulnerabilities, injection vectors & authorization flaws**
+- 💾 **Memory leaks, unclosed streams & unbounded buffers**
+- 🔌 **Breaking public API contracts & database schema regressions**
 
-Instead of noisy surface-level linting, GoBetter operates as an autonomous, high-signal senior reviewer. It performs deep structural AST diff inspection to catch the bugs human reviewers dread:
-- **Concurrency races & thread synchronization hazards**
-- **Memory leaks, unclosed streams & unbounded buffers**
-- **Security vulnerabilities, injection vectors & flawed authorization guards**
-- **Breaking changes in public API contracts & database schema regressions**
-
-All reviews are delivered with live quality scores, actionable code fixes, and an interactive developer dashboard with full-duplex conversational reasoning.
+Reviews include live defect scores, copy-paste fixes, and an interactive full-duplex chat assistant to interrogate diffs.
 
 ---
 
@@ -133,83 +131,27 @@ Switch effortlessly between models in the UI:
 
 ## 🚀 1-Click Cloud Deployment
 
-GoBetter is architected as a clean two-tier deployment: a static client SPA and a containerized backend worker engine.
+GoBetter is architected as a clean two-tier deployment:
 
-### 1. Deploy Frontend on Vercel
-
-Deploys the client dashboard (`client/`) as a high-speed global static SPA.
+### 1. Frontend on Vercel
+Deploys the client dashboard (`client/`) as a global static SPA with automated SPA routing rewrites.
 
 [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fdev-hari-prasad%2Fgo-better&project-name=go-better&repository-name=go-better)
 
-**What this button does:**
-- Automatically provisions a Vercel project linked to your repository.
-- Uses the root [`vercel.json`](./vercel.json) to set root directory to `client`, build the Vite SPA (`pnpm build`), and serve `client/dist`.
-- Configures client-side rewrite rules (`/gobe-ai`, `/pull-requests`, `/byok`, `/settings`) directly to `index.html`.
-- **Configuration needed**: Simply set `VITE_API_BASE_URL` in your Vercel project environment variables to your deployed backend URL.
+> **Configuration**: Set `VITE_API_BASE_URL` in Vercel to your deployed Railway backend URL.
 
----
-
-### 2. Deploy Backend & Workers on Railway
-
-Deploys the Express REST API, streaming chat endpoints, and distributed BullMQ background workers.
+### 2. Backend & Workers on Railway
+Deploys the containerized Express REST API, BullMQ workers, and auto-executes Drizzle migrations with managed PostgreSQL (17/18) and Redis.
 
 [![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new?repo=https%3A%2F%2Fgithub.com%2Fdev-hari-prasad%2Fgo-better)
 
-**What this button does:**
-- Builds and runs the containerized backend using [`backend/Dockerfile`](./backend/Dockerfile).
-- Boots the Express.js API server (`PORT: 5000`) and launches all concurrent BullMQ queue workers.
-- Connects automatically to Railway's managed PostgreSQL and Redis plugins.
-- Executes automated Drizzle ORM schema migrations on startup.
-- **Configuration needed**: Provide your database connection string (`DATABASE_URL`), Redis connection (`REDIS_HOST`, `REDIS_PORT`), GitHub Webhook secret, session secrets, and optional AI provider keys in Railway environment variables.
+> **Configuration**: Add `DATABASE_URL`, `REDIS_HOST`, `REDIS_PORT`, and your GitHub/session secrets in Railway environment variables.
 
 ---
 
-## Local Development Quickstart
+## 🛠️ Local Development
 
-### Prerequisites
-- **Node.js** `v20.x` or higher (or Bun)
-- **pnpm** `v9.x` (`corepack enable pnpm`)
-- **Docker** (for local PostgreSQL & Redis)
-
-### 1. Clone & Spin up Infrastructure
-```bash
-git clone https://github.com/dev-hari-prasad/go-better.git
-cd go-better
-
-# Launch PostgreSQL 16 & Redis 7
-docker run -d --name gobetter-postgres -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=gobetter_db -p 5432:5432 postgres:16
-docker run -d --name gobetter-redis -p 6379:6379 redis:7-alpine
-```
-
-### 2. Configure Environment Files
-```bash
-cp backend/src/.env.example backend/src/.env
-cp client/.env.example client/.env
-```
-
-### 3. Install Dependencies & Push Database Schema
-```bash
-pnpm install
-
-# Push Drizzle schema to local database
-cd backend
-pnpm run db:push
-cd ..
-```
-
-### 4. Run Services
-```bash
-# Terminal 1: Backend API & BullMQ Workers
-cd backend && pnpm run dev
-
-# Terminal 2: React Vite Client
-cd client && pnpm run dev
-
-# Terminal 3: Mintlify Documentation (Optional)
-pnpm run docs:dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+For complete local development setup—including Docker commands for PostgreSQL 17/18 and Redis, environment configuration, database migration scripts, and running worker processes—please see our **[Contributing Guide &bull; Local Development Setup](./CONTRIBUTING.md#local-development-setup)**.
 
 ---
 

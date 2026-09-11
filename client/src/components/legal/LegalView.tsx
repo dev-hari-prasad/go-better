@@ -1,18 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Copy, Check } from '@phosphor-icons/react';
 import {
-  AnthropicDark,
   Cloudflare,
-  DigitalOcean,
   GitHubDark,
-  Google,
   Neon,
-  OpenAIDark,
   OpenRouterDark,
   RailwayDark,
-  Redis,
   ResendDark,
-  Upstash,
   VercelDark,
 } from '@ridemountainpig/svgl-react';
 import { InceptionLogo } from '../ui/icons/BrandLogos';
@@ -33,18 +27,13 @@ export interface SimpleSubprocessor {
 
 export const SUBPROCESSORS_LIST: SimpleSubprocessor[] = [
   {
-    name: 'DigitalOcean',
-    purpose: 'Database and server',
-    icon: <DigitalOcean className="w-4 h-4 shrink-0" />,
-  },
-  {
     name: 'Railway',
     purpose: 'Server and in-memory store',
     icon: <RailwayDark className="w-4 h-4 shrink-0" />,
   },
   {
     name: 'Vercel Inc.',
-    purpose: 'Frontend and data hosting',
+    purpose: 'Frontend and LLM inference and routing',
     icon: <VercelDark className="w-4 h-4 shrink-0" />,
   },
   {
@@ -58,29 +47,9 @@ export const SUBPROCESSORS_LIST: SimpleSubprocessor[] = [
     icon: <OpenRouterDark className="w-4 h-4 shrink-0" />,
   },
   {
-    name: 'Vercel AI',
-    purpose: 'Edge LLM inference & routing',
-    icon: <VercelDark className="w-4 h-4 shrink-0" />,
-  },
-  {
-    name: 'Google',
-    purpose: 'LLM inference (Gemini / PaLM)',
-    icon: <Google className="w-4 h-4 shrink-0" />,
-  },
-  {
     name: 'Inception Labs',
     purpose: 'LLM inference (Mercury-2)',
     icon: <InceptionLogo className="w-4 h-4 shrink-0" />,
-  },
-  {
-    name: 'OpenAI',
-    purpose: 'LLM inference and code review',
-    icon: <OpenAIDark className="w-4 h-4 shrink-0" />,
-  },
-  {
-    name: 'Anthropic',
-    purpose: 'LLM inference and code review',
-    icon: <AnthropicDark className="w-4 h-4 shrink-0" />,
   },
   {
     name: 'GitHub',
@@ -91,17 +60,6 @@ export const SUBPROCESSORS_LIST: SimpleSubprocessor[] = [
     name: 'Resend',
     purpose: 'Transactional email',
     icon: <ResendDark className="w-4 h-4 shrink-0" />,
-  },
-  {
-    name: 'Redis / Upstash',
-    purpose: 'Queue and in-memory caching',
-    icon: (
-      <div className="flex items-center gap-1 shrink-0">
-        <Redis className="w-4 h-4 shrink-0" />
-        <span className="text-zinc-600 text-xs">/</span>
-        <Upstash className="w-3.5 h-3.5 shrink-0" />
-      </div>
-    ),
   },
   {
     name: 'Cloudflare',
@@ -470,7 +428,7 @@ export const LegalView: React.FC<LegalViewProps> = ({
                 5. Third-Party Subprocessors
               </h2>
               <p className="text-sm sm:text-[15px] text-zinc-300 leading-relaxed">
-                On the hosted demo, pull request diffs are forwarded securely via TLS to configured AI inference endpoints (including OpenRouter, Vercel AI, Google, Inception Labs, OpenAI, and Anthropic, depending on availability and pricing) and infrastructure providers solely to produce code reviews. You can view our full{' '}
+                On the hosted demo, pull request diffs are forwarded securely via TLS to configured AI inference endpoints (including OpenRouter, Vercel, and Inception Labs, depending on availability and pricing) and infrastructure providers solely to produce code reviews. You can view our full{' '}
                 <button
                   type="button"
                   onClick={() => handleTabSwitch('subprocessors')}
@@ -556,6 +514,10 @@ export const LegalView: React.FC<LegalViewProps> = ({
 
             <p className="text-zinc-300 leading-relaxed">
               By using our service you also acknowledge and agree that your data will be processed by these third-party subprocessors solely to the extent necessary to provide the service.
+            </p>
+
+            <p className="text-zinc-300 leading-relaxed">
+              These subprocessors may engage their own subprocessors or service providers to support their services. GoBetter does not control those independent parties and is not responsible for their processing activities, policies, or practices.
             </p>
           </div>
         )}

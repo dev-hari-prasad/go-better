@@ -319,11 +319,20 @@ router.get('/github/callback', async (req, res) => {
         }
 
         const githubId = String(profile.id);
-        const [githubUser] = await db.select().from(users).where(eq(users.githubID, githubId));
-        const [emailUser] = await db.select().from(users).where(eq(users.email, email));
+        const [githubUser] = await db.select({
+            id: users.id,
+            githubID: users.githubID,
+        }).from(users).where(eq(users.githubID, githubId));
+        const [emailUser] = await db.select({
+            id: users.id,
+            githubID: users.githubID,
+        }).from(users).where(eq(users.email, email));
 
         if (isConnectFlow && connectUserId) {
-            const [targetUser] = await db.select().from(users).where(eq(users.id, connectUserId));
+            const [targetUser] = await db.select({
+                id: users.id,
+                githubID: users.githubID,
+            }).from(users).where(eq(users.id, connectUserId));
             if (!targetUser) {
                 return clearAndRedirect(res, targetClientUrl, 'User account not found');
             }
@@ -603,7 +612,11 @@ router.post('/verify-email', async (req, res) => {
         try {
             let userRecord: any = null;
             const existing = await db
-                .select()
+                .select({
+                    id: users.id,
+                    name: users.name,
+                    email: users.email,
+                })
                 .from(users)
                 .where(eq(users.email, email));
 

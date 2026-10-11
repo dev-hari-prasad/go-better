@@ -2,8 +2,8 @@ services:
   # required backend service
   backend:
     build:
-      context: ./backend
-      dockerfile: DockerFile
+      context: .
+      dockerfile: backend/DockerFile
     image: go-better-backend
     ports:
       - "5000:5000"
